@@ -21,9 +21,8 @@
         [off-x off-y] [2 2]
         color (fn [n] (l/color world n))]
     (doseq [i (range (* w h))]
-      (s/put-string scr (+ (mod i w) off-x) (+ (quot i w) off-y)
+      (s/put-string scr (+ (* 2 (mod i w)) off-x) (+ (quot i w) off-y)
                     "  " {:bg (color i)}))))
-
 
 (defn redraw [world]
   (all-black)
@@ -38,26 +37,31 @@
   (System/exit 0))
 
 (defn new-world []
-  (let [[w h] [78 10]]
-;  (let [[w h] (s/get-size scr)]
-    (l/gen-rand-world (- w 4) (- h 4))))
+;  (let [[w h] [78 10]]
+  (let [[w h] (s/get-size scr)]
+    (l/gen-rand-world (int (Math/floor (/ (- w 4) 2)))
+                      (- h 3))))
 
 (defn handle-input [world]
   (redraw world)
   (let [key (s/get-key-blocking scr)]
     (case key
       \q (recur (quit))
-      \r (recur (new-world))
-      \a (recur (l/colorize world user-cluster :red))
-      \s (recur (l/colorize world user-cluster :green))
-      \d (recur (l/colorize world user-cluster :blue))
-      \f (recur (l/colorize world user-cluster :yellow))
+      \s (recur (new-world))
+      \r (recur (l/colorize world user-cluster :red))
+      \g (recur (l/colorize world user-cluster :green))
+      \b (recur (l/colorize world user-cluster :blue))
+      \y (recur (l/colorize world user-cluster :yellow))
       \c (recur (l/colorize world user-cluster :cyan))
-      \v (recur (l/colorize world user-cluster :magenta))
+      \v (recur (l/colorize world user-cluster :magenta)) ; violet
       (recur world))))
 
 (defn -main
   "Nothing to see here."
   [& args]
   (s/start scr)
-  (handle-input (new-world)))
+  (s/get-key scr) ; workaround for tiling managers
+  (let [w (new-world)]
+    ; handle command line parameters
+    (redraw w)
+    (handle-input (new-world))))
