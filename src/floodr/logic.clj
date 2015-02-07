@@ -5,18 +5,20 @@
 ; :parents - a map node to node
 ; :neighbors - a map node to set of nodes
 ; :colors - a map node to color
-(defstruct world :parents :neighbors :colors)
+(defstruct world :w :h :parents :neighbors :colors)
 
-(def empty-world (struct world {} {} {}))
+(def empty-world (struct world 0 0 {} {} {}))
+
+(defn mk-world [w h]
+  (struct world w h {} {} {}))
 
 (defn add-node
   [w node node-parent node-neighbors node-color]
-  (struct world
+  (struct world 
+          (get w :w) (get w :h)
           (assoc-in (get w :parents) [node] node-parent)
           (assoc-in (get w :neighbors) [node] node-neighbors)
           (assoc-in (get w :colors) [node] node-color)))
-
-
 
 (defn cluster 
   "returns the cluster that the node is a member of"
@@ -37,6 +39,7 @@
   [w n1 n2]
   (let [c1 (cluster w n1) c2 (cluster w n2)]
     (struct world
+            (get w :w) (get w :h)
             (assoc-in (get w :parents) [c1] c2)
             (assoc-in (get w :neighbors) [c2]
                       (set/difference (set/union (neighbors w c1) (neighbors w c2)) #{c1 c2}))
@@ -68,8 +71,9 @@
 (defn gen-rand-world
   [width height]
   (let [nodes (range (* width height))
+        init-world (mk-world width height)
         add (fn [world node]
               (add-node world node node
                         (gen-neighbors width height node)
                         (rand-nth colors)))]
-    (reduce add empty-world nodes)))
+    (reduce add init-world nodes)))

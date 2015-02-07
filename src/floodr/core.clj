@@ -1,39 +1,61 @@
 (ns floodr.core
-  (:require [lanterna.screen :as s])
+  (:require [lanterna.screen :as s]
+            [floodr.logic :as l])
   (:gen-class))
 
 ;;; Constants
 
-(def colors '(:red :blue :green :yellow :cyan :magenta))
+(def current-world)
 
-(def scr (s/get-screen :swing))
+(def scr (s/get-screen :unix))
 
 (defn put-random-blocks [screen startx starty width height]
   (doseq [y (range height)]
     (doseq [x (range 0 width 2)]
       (s/put-string screen (+ startx x) (+ starty y)
-                    "  " {:bg (rand-nth colors)}))))
+                    "  " {:bg (rand-nth l/colors)}))))
 
-(defn quit [screen]
-  (s/stop screen)
+(defn all-black []
+  (let [[w h] (s/get-size scr)]
+    (doseq [y (range h)]
+      (doseq [x (range w)]
+        (s/put-string scr x y " ")))))
+
+(defn draw [world]
+  (let [[w h] [(get world :w) (get world :h)]
+        [off-x off-y] [2 2]
+        color (fn [n] (l/color world n))]
+    (doseq [i (range (* w h))]
+      (s/put-string scr (+ (mod i w) off-x) (+ (quot i w) off-y)
+                    "  " {:bg (color i)}))))
+
+
+(defn redraw [world]
+  (all-black)
+  (s/put-string scr 0 0 "floodr")
+  (draw world)
+  (s/redraw scr))
+
+
+
+(defn quit []
+  (s/stop scr)
   (System/exit 0))
 
-(defn foo [x y]
-  (+ x y))
+(defn new-world []
+  (let [[w h] (s/get-size scr)]
+    (l/gen-rand-world (- w 4) (- h 4))))
 
-(defn handle-input [screen]
-  (let [key (s/get-key-blocking screen)]
+(defn handle-input [world]
+  (redraw world)
+  (let [key (s/get-key-blocking scr)]
     (case key
-      \q (quit screen)
-      \r (put-random-blocks screen 2 2 5 5 )))
-  (s/redraw screen)
-  (recur screen))
+      \q (recur (quit))
+      \r (recur (new-world))
+      (recur world))))
 
 (defn -main
   "Nothing to see here."
   [& args]
   (s/start scr)
-  (s/put-string scr 0 0 "Hello World!" {:bg :cyan})
-  (put-random-blocks scr 2 2 80 4)
-  (s/redraw scr)
-  (handle-input scr))
+  (handle-input (new-world)))
