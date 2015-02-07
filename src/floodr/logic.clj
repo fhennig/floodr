@@ -40,15 +40,33 @@
   (let [c1 (cluster w n1) c2 (cluster w n2)]
     (struct world
             (get w :w) (get w :h)
-            (assoc-in (get w :parents) [c1] c2)
-            (assoc-in (get w :neighbors) [c2]
-                      (set/difference (set/union (neighbors w c1) (neighbors w c2)) #{c1 c2}))
-            (get w :colors))))
+            (assoc (get w :parents) c1 c2) ; c1 merged into c2
+            (dissoc (assoc (get w :neighbors) c2
+                                 (set/difference (set/union (neighbors w c1)
+                                                            (neighbors w c2))
+                                                 #{c1 c2}))
+                       c1)
+            (dissoc (get w :colors) c1))))
 
 (defn color
   "gets the color of a cluster"
   [w node]
   (get (get w :colors) (cluster w node)))
+
+(defn merge-candidates [w cluster]
+  (let [c-col (color w cluster)
+        c-ns (neighbors w cluster)]
+    (filter #(= (color w %) c-col) c-ns)))
+
+(defn merge-neighbors [w c]
+    (reduce #(merge-clusters %1 (cluster %1 c) %2)
+          w (merge-candidates w c)))
+
+(defn colorize [w clust color]
+  (let [c (cluster w clust)
+        nw (struct world (get w :w) (get w :h) (get w :parents)
+                   (get w :neighbors) (assoc-in (get w :colors) [c] color))]
+    (merge-neighbors nw c)))
 
 (defn adjacent?
   "determines if two clusters are next to each other"
@@ -75,5 +93,7 @@
         add (fn [world node]
               (add-node world node node
                         (gen-neighbors width height node)
-                        (rand-nth colors)))]
-    (reduce add init-world nodes)))
+                        (rand-nth colors)))
+        w1 (reduce add init-world nodes)
+        w2 (reduce #(colorize %1 %2 (color %1 %2)) w1 nodes)]
+    w2))

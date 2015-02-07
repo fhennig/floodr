@@ -6,14 +6,9 @@
 ;;; Constants
 
 (def current-world)
+(def user-cluster 0)
 
 (def scr (s/get-screen :unix))
-
-(defn put-random-blocks [screen startx starty width height]
-  (doseq [y (range height)]
-    (doseq [x (range 0 width 2)]
-      (s/put-string screen (+ startx x) (+ starty y)
-                    "  " {:bg (rand-nth l/colors)}))))
 
 (defn all-black []
   (let [[w h] (s/get-size scr)]
@@ -43,7 +38,8 @@
   (System/exit 0))
 
 (defn new-world []
-  (let [[w h] (s/get-size scr)]
+  (let [[w h] [78 10]]
+;  (let [[w h] (s/get-size scr)]
     (l/gen-rand-world (- w 4) (- h 4))))
 
 (defn handle-input [world]
@@ -52,6 +48,12 @@
     (case key
       \q (recur (quit))
       \r (recur (new-world))
+      \a (recur (l/colorize world user-cluster :red))
+      \s (recur (l/colorize world user-cluster :green))
+      \d (recur (l/colorize world user-cluster :blue))
+      \f (recur (l/colorize world user-cluster :yellow))
+      \c (recur (l/colorize world user-cluster :cyan))
+      \v (recur (l/colorize world user-cluster :magenta))
       (recur world))))
 
 (defn -main
