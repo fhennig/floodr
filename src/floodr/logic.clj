@@ -37,6 +37,9 @@
 (defn clusters [world]
   (get world :clusters))
 
+(defn won? [world]
+  (= 1 (count (clusters world))))
+
 ;;; functions that operate on nodes
 
 (defn cluster 

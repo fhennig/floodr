@@ -1,6 +1,7 @@
 (ns floodr.core
   (:require [lanterna.screen :as s]
-            [floodr.logic :as l])
+            [floodr.logic :as l]
+            [floodr.lanterna-window :as w])
   (:gen-class))
 
 ;;; util
@@ -50,25 +51,16 @@
     (put-ln 0 (reduce #(str %1 " - " %2) (list title help gen cs-left)))))
 
 (defn win []
-  (let [[w h] (s/get-size (get-scr))
-        l1 "        good job!          "
-        l2 "                           "
-        l3 " [q - quit] [s - new game] "
-        [bw bh] [(count l1) 3]
-        x (floor (- (/ w 2) (/ bw 2)))
-        y (floor (- (/ h 2) (/ bh 2)))]
-    (s/put-string (get-scr) x y       l1)
-    (s/put-string (get-scr) x (+ 1 y) l2)
-    (s/put-string (get-scr) x (+ 2 y) l3)))
-
-(defn won? [world] ;;; TODO put in logic
-  (= 1 (count (l/clusters world))))
+  (w/show-window (get-scr)
+                 ["good job!"
+                  " "
+                  "[q - quit] [s - new game]"] :centered))
 
 (defn redraw [world]
   (all-black)
   (stats world)
   (draw world)
-  (when (won? world) (win))
+  (when (l/won? world) (win))
   (s/redraw (get-scr)))
     
     
@@ -83,11 +75,29 @@
                       (- h 3))))
 
 (defn show-help []
-  (all-black)
-  (put-ln 0 "floodr")
-  (put-ln 2 "controls:")
-  (put-ln -1 "press any key to continue")
-  (s/redraw (get-scr))
+  (w/show-window (get-scr)
+                 ["controls:"
+                  " "
+                  "  q - quit"
+                  "  h - show this help"
+                  "  s - start new game"
+                  " "
+                  "  r - red"
+                  "  g - green"
+                  "  b - blue"
+                  "  c - cyan"
+                  "  v - violet"
+                  "  y - yellow"
+                  " " " "
+                  "press any key to continue"])
+  (s/get-key-blocking (get-scr)))
+
+(defn show-debug []
+  (w/show-window (get-scr)
+                 ["line 1"
+                  "and line 2"
+                  " "
+                  "press any key to continue"] :centered)
   (s/get-key-blocking (get-scr)))
 
 (defn handle-input [world]
@@ -98,6 +108,7 @@
       \s (recur (new-world))
       \h (do (show-help) (recur world))
       \? (do (show-help) (recur world))
+      \d (do (show-debug) (recur world))
       \r (recur (l/colorize world user-cluster :red))
       \g (recur (l/colorize world user-cluster :green))
       \b (recur (l/colorize world user-cluster :blue))
