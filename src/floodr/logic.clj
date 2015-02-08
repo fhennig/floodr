@@ -13,41 +13,22 @@
   :colors ; what color does a cluster have
   :sizes) ; size of the clusters
 
+(def world-keywords '(:w :h :generation :clusters :parents :neighbors :colors :sizes))
+
 (def empty-world (struct world 0 0 0 #{} {} {} {} {}))
 
 (defn new-world [ow args]
-  (let [w (get args :w)
-        h (get args :h)
-        gen (get args :generation)
-        cls (get args :clusters)
-        ps (get args :parents)
-        ns (get args :neighbors)
-        cs (get args :colors)
-        ss (get args :sizes)]
-    (struct world
-            (if w w (get ow :w))
-            (if h h (get ow :h))
-            (if gen gen (get ow :generation))
-            (if cls cls (get ow :clusters))
-            (if ps ps (get ow :parents))
-            (if ns ns (get ow :neighbors))
-            (if cs cs (get ow :colors))
-            (if ss ss (get ow :sizes)))))
-
-(defn generation [world]
-  (get world :generation))
-
-(defn clusters [world]
-  (get world :clusters))
+  (let [x (fn [kw a b] (if (kw a) (kw a) (kw b)))]
+    (apply struct world (map #(x % args ow) world-keywords))))
 
 (defn won? [world]
-  (= 1 (count (clusters world))))
+  (= 1 (count (:clusters world))))
 
 ;;; functions that operate on nodes
 
 (defn parent
   [w n]
-  (get (get w :parents) n))
+  (get (:parents w) n))
 
 (defn cluster 
   "returns the cluster that the node is a member of"
@@ -70,18 +51,18 @@
 (defn color
   "gets the color of a cluster"
   [w node]
-  (get (get w :colors) (cluster w node)))
+  (get (:colors w) (cluster w node)))
 
 (defn size
   "gets the size of a cluster"
   [w node]
-  (get (get w :sizes) (cluster w node)))
+  (get (:sizes w) (cluster w node)))
 
 (defn neighbors 
   "returns the neighbor clusters of the cluster"
   [world node]
   (set (map #(cluster world %)
-            (get (get world :neighbors) (cluster world node)))))
+            (get (:neighbors world) (cluster world node)))))
 
 (defn adjacent-nodes 
   "amout of nodes with color adjacent to the given cluster"
@@ -101,13 +82,13 @@
   (let [c1 (cluster w n1) c2 (cluster w n2)
         cs (if (> (size w c1) (size w c2)) c2 c1) ; smaller cluster
         cb (if (> (size w c1) (size w c2)) c1 c2)] ; bigger cluster
-    (new-world w {:clusters (disj (get w :clusters) cs)
-                  :parents (assoc (get w :parents) cs cb)
-                  :neighbors (dissoc (assoc (get w :neighbors) cb
+    (new-world w {:clusters (disj (:clusters w) cs)
+                  :parents (assoc (:parents w) cs cb)
+                  :neighbors (dissoc (assoc (:neighbors w) cb
                                             (set/union (disj (neighbors w cs) cb)
                                                        (disj (neighbors w cb) cs))) cs)
-                  :colors (dissoc (get w :colors) cs)
-                  :sizes (dissoc (assoc (get w :sizes) cb (+ (size w cs) (size w cb))) cs)})))
+                  :colors (dissoc (:colors w) cs)
+                  :sizes (dissoc (assoc (:sizes w) cb (+ (size w cs) (size w cb))) cs)})))
 
 (defn merge-neighbors
   "merges all mergeable neighbors"
@@ -119,19 +100,19 @@
   "changes the color of the given cluster and merges its neighbors"
   [w clust color]
   (let [c (cluster w clust)
-        nw (new-world w {:generation (+ 1 (get w :generation))
-                         :colors (assoc (get w :colors) c color)})]
+        nw (new-world w {:generation (+ 1 (:generation w))
+                         :colors (assoc (:colors w) c color)})]
     (merge-neighbors nw c)))
 
 ;;; World generation
 
 (defn add-node
   [w node node-neighbors node-color]
-  (new-world w {:clusters (conj (get w :clusters) node)
-                :parents (assoc (get w :parents) node node)
-                :neighbors (assoc (get w :neighbors) node node-neighbors)
-                :colors (assoc (get w :colors) node node-color)
-                :sizes (assoc (get w :sizes) node 1)}))
+  (new-world w {:clusters (conj (:clusters w) node)
+                :parents (assoc (:parents w) node node)
+                :neighbors (assoc (:neighbors w) node node-neighbors)
+                :colors (assoc (:colors w) node node-color)
+                :sizes (assoc (:sizes w) node 1)}))
 
 (defn index->coords
   [w i]

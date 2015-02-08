@@ -36,7 +36,7 @@
       (s/put-string (get-scr) 2 (+ h line) str))))
 
 (defn draw [world]
-  (let [[w h] [(get world :w) (get world :h)]
+  (let [[w h] [(:w world) (:h world)]
         [off-x off-y] [2 2]
         color (fn [n] (l/color world n))]
     (doseq [i (range (* w h))]
@@ -46,8 +46,8 @@
 (defn stats [world]
   (let [title "floodr"
         help "'h' for help"
-        gen (str "generation: " (l/generation world))
-        cs-left (str "blobs left: " (- (count (l/clusters world)) 1))]
+        gen (str "generation: " (:generation world))
+        cs-left (str "blobs left: " (- (count (:clusters world)) 1))]
     (put-ln 0 (reduce #(str %1 " - " %2) (list title help gen cs-left)))))
 
 (defn win []
