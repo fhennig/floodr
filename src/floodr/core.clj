@@ -92,13 +92,27 @@
                   "press any key to continue"])
   (s/get-key-blocking (get-scr)))
 
-(defn show-debug []
+(defn show-debug [w]
   (w/show-window (get-scr)
-                 ["line 1"
-                  "and line 2"
-                  " "
-                  "press any key to continue"] :centered)
+                 ["debug window"
+                  ""
+                  (str "r: " (l/adjacent-nodes w user-cluster :red))
+                  (str "g: " (l/adjacent-nodes w user-cluster :green))
+                  (str "b: " (l/adjacent-nodes w user-cluster :blue))
+                  (str "y: " (l/adjacent-nodes w user-cluster :yellow))
+                  (str "c: " (l/adjacent-nodes w user-cluster :cyan))
+                  (str "v: " (l/adjacent-nodes w user-cluster :magenta))])
   (s/get-key-blocking (get-scr)))
+
+(defn auto-solve [w]
+  (if (l/won? w) w
+      (do (redraw w)
+;          (show-debug w)
+          (Thread/sleep 30)
+          (let [color (reduce #(if (> (l/adjacent-nodes w user-cluster %2)
+                                      (l/adjacent-nodes w user-cluster %1)) %2 %1)
+                              (apply list (set (map #(l/color w %) (l/neighbors w user-cluster)))))]
+          (recur (l/colorize w user-cluster color))))))
 
 (defn handle-input [world]
   (redraw world)
@@ -108,7 +122,8 @@
       \s (recur (new-world))
       \h (do (show-help) (recur world))
       \? (do (show-help) (recur world))
-      \d (do (show-debug) (recur world))
+      \d (do (show-debug world) (recur world))
+      \a (recur (auto-solve world))
       \r (recur (l/colorize world user-cluster :red))
       \g (recur (l/colorize world user-cluster :green))
       \b (recur (l/colorize world user-cluster :blue))
@@ -132,7 +147,7 @@
   (handle-args args)
   (s/start (get-scr))
   (s/get-key (get-scr)) ; workaround for tiling managers
+  (redraw (new-world))
   (let [w (new-world)]
     ; handle command line parameters
-    (redraw w)
-    (handle-input (new-world))))
+    (handle-input w)))
