@@ -14,11 +14,12 @@
     (merge-neighbors w 1)
     (colorize w 1 :red)))
 
-(def tw (struct world 0 0 0 #{0 1 2 5 6 7}
-                {8 7, 7 7, 6 6, 5 5, 4 3, 3 1, 2 2, 1 1, 0 0}
-                {7 #{1 6 5}, 6 #{7 3}, 5 #{4 2 8}, 2 #{1 5}, 1 #{0 7 6 2 5}, 0 #{1 3}}
-                {7 :red, 6 :yellow, 5 :blue, 2 :magenta, 1 :green, 0 :cyan}
-                {7 2, 6 1, 5 1, 2 1, 1 3, 0 1}))
+(def tw {:w 0 :h 0 :generation 0
+         :clusters #{0 1 2 5 6 7}
+         :parents {8 7, 7 7, 6 6, 5 5, 4 3, 3 1, 2 2, 1 1, 0 0}
+         :neighbors {7 #{1 6 5}, 6 #{7 3}, 5 #{4 2 8}, 2 #{1 5}, 1 #{0 7 6 2 5}, 0 #{1 3}}
+         :colors {7 :red, 6 :yellow, 5 :blue, 2 :magenta, 1 :green, 0 :cyan}
+         :sizes {7 2, 6 1, 5 1, 2 1, 1 3, 0 1}})
 ; clusters: (1 3 4) (7 8) singles ...
 
 (deftest test-add-node
@@ -26,10 +27,6 @@
         w2 (add-node w1 -1 #{1} :cyan)
         w3 (merge-clusters w2 -1 0)]
     (is (= (neighbors w3 -1) (neighbors w3 0)))))
-
-(deftest test-add-node-2
-  (is (= (add-node empty-world 1 #{3 4} :red)
-         (struct world 0 0 0 #{1} {1 1} {1 #{3 4}} {1 :red} {1 1}))))
 
 (deftest test-cluster
   (is (= (cluster tw 1) (cluster tw 1)))
