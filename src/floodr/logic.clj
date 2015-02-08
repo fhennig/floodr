@@ -66,11 +66,6 @@
   (set (map #(cluster world %)
             (get (:neighbors world) (cluster world node)))))
 
-(defn adjacent-nodes 
-  "amout of nodes with color adjacent to the given cluster"
-  [w cluster col]
-  (apply + (map #(size w %) (filter #(= col (color w %)) (neighbors w cluster)))))
-
 (defn mergeable-neighbors
   "returns the clusters that are adjacent and of the same color"
   [w cluster]
@@ -163,3 +158,15 @@
         w2 (reduce #(colorize %1 %2 (color %1 %2)) w1 nodes)
         w3 (set-vals w2 [:generation 0])]
     w3))
+
+;;; utilities
+
+(defn adjacent-nodes 
+  "amout of nodes with color adjacent to the given cluster"
+  [w cluster col]
+  (apply + (map #(size w %) (filter #(= col (color w %)) (neighbors w cluster)))))
+
+(defn adjacent-colors
+  "returns the colors of which there are adjacent clusters"
+  [w cluster]
+  (distinct (map #(color w %) (neighbors w cluster))))

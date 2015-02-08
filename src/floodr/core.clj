@@ -1,6 +1,7 @@
 (ns floodr.core
   (:require [lanterna.screen :as s]
             [floodr.logic :as l]
+            [floodr.solvers :as solver]
             [floodr.lanterna-window :as w])
   (:gen-class))
 
@@ -47,8 +48,9 @@
   (let [title "floodr"
         help "'h' for help"
         gen (str "generation: " (:generation world))
-        cs-left (str "blobs left: " (- (count (:clusters world)) 1))]
-    (put-ln 0 (reduce #(str %1 " - " %2) (list title help gen cs-left)))))
+        cs-left (str "blobs left: " (- (count (:clusters world)) 1))
+        greed (str "greedy solver: " (:generation (solver/greedy-solve world user-cluster)))]
+    (put-ln 0 (reduce #(str %1 " - " %2) (list title help gen cs-left greed)))))
 
 (defn win []
   (w/show-window (get-scr)
@@ -95,6 +97,7 @@
 (defn show-debug [w]
   (w/show-window (get-scr)
                  ["debug window"
+                  (str "greedy solver: " (:generation (solver/greedy-solve w user-cluster)))
                   ""
                   (str "r: " (l/adjacent-nodes w user-cluster :red))
                   (str "g: " (l/adjacent-nodes w user-cluster :green))
