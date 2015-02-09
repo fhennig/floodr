@@ -14,6 +14,8 @@
     (merge-neighbors w 1)
     (colorize w 1 :red)))
 
+(def tnodes #{0 1 2 3 4 5 6 7 8})
+
 (def tw {:w 0 :h 0 :generation 0
          :clusters #{0 1 2 5 6 7}
          :parents {8 7, 7 7, 6 6, 5 5, 4 3, 3 1, 2 2, 1 1, 0 0}
@@ -35,7 +37,18 @@
   (is (= (cluster tw 7) (cluster tw 8)))
   (is (= (cluster tw 8) (cluster tw 8))))
 
+(deftest test-clusters
+  (is (= (apply clusters tw tnodes) (:clusters tw))))
+
+(deftest test-size
+  (is (= 3 (size tw 1)))
+  (is (= 4 (size tw 1 0)))
+  (is (= 4 (size tw 0 1 3 4)))
+  (is (= 2 (size tw 8)))
+  (is (= 3 (apply size tw (neighbors tw 0)))))
+
 (deftest test-neighbors
+  (is (= 1 (count (neighbors tw 0))))
   (is (contains? (neighbors tw 4) (cluster tw 0)))
   (is (contains? (neighbors tw 4) (cluster tw 2)))
   (is (contains? (neighbors tw 4) (cluster tw 5)))

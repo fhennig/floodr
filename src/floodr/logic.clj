@@ -22,10 +22,16 @@
    :parents {} ; maps nodes to their parents; used to get the cluster of a node
    :neighbors {} ; what neighbors does a cluster have
    :colors {} ; what color does a cluster have
-   :sizes {}}) ; size of the clusters
+   :sizes {} ; size of the clusters
+   :players #{}}) ; a player is identified by a node
 
-(defn won? [world]
-  (= 1 (count (:clusters world))))
+(defn finished? [world]
+  (= (count (:clusters world))
+     (count (:players world))))
+
+(defn add-player
+  [w p]
+  (update-vals w [:players conj p]))
 
 ;;; functions that operate on nodes
 
@@ -39,6 +45,10 @@
   (let [p (parent world node)]
     (if (= node p) node
       (recur world p))))
+
+(defn clusters
+  [w & nodes]
+    (set (map #(cluster w %) nodes)))
 
 (defn path
   "mainly used for debugging, returns the path that the node takes
@@ -56,9 +66,10 @@
   (get (:colors w) (cluster w node)))
 
 (defn size
-  "gets the size of a cluster"
-  [w node]
-  (get (:sizes w) (cluster w node)))
+  "gets the accumulated size of the given clusters, without duplicates"
+  [w & nodes]
+  (apply + (map #(get (:sizes w) %) 
+                (apply clusters w nodes))))
 
 (defn neighbors 
   "returns the neighbor clusters of the cluster"
@@ -66,12 +77,22 @@
   (set (map #(cluster world %)
             (get (:neighbors world) (cluster world node)))))
 
+(defn player-owned?
+  [w c]
+  (let [ps (apply clusters w (:players w))]
+    (contains? ps (cluster w c))))
+
+(defn has-color?
+  [w c col]
+  (= (color w c) col))
+
 (defn mergeable-neighbors
   "returns the clusters that are adjacent and of the same color"
   [w cluster]
-  (let [c-col (color w cluster)
-        c-ns (neighbors w cluster)]
-    (filter #(= (color w %) c-col) c-ns)))
+  (let [c-col (color w cluster)]
+    (filter #(and (not (player-owned? w %))
+                  (has-color? w % c-col))
+            (neighbors w cluster))))
   
 (defn merge-clusters
   "returns a new world where c1 and c2 are merged"
@@ -146,10 +167,10 @@
 (defn gen-rand-world
   [width height]
   (let [nodes (range (* width height))
+        ki (- (* width height) 1)
         init-world (set-vals empty-world
                              [:w width]
-                             [:h height]
-                             [:lusters (set nodes)])
+                             [:h height])
         add (fn [world node]
               (add-node world node
                         (gen-neighbors width height node neighbors-4)
@@ -158,15 +179,3 @@
         w2 (reduce #(colorize %1 %2 (color %1 %2)) w1 nodes)
         w3 (set-vals w2 [:generation 0])]
     w3))
-
-;;; utilities
-
-(defn adjacent-nodes 
-  "amout of nodes with color adjacent to the given cluster"
-  [w cluster col]
-  (apply + (map #(size w %) (filter #(= col (color w %)) (neighbors w cluster)))))
-
-(defn adjacent-colors
-  "returns the colors of which there are adjacent clusters"
-  [w cluster]
-  (distinct (map #(color w %) (neighbors w cluster))))

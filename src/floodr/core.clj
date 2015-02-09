@@ -14,6 +14,7 @@
 
 (def current-world)
 (def user-cluster 0)
+(def ki 50)
 
 ;;; screen
 
@@ -48,9 +49,8 @@
   (let [title "floodr"
         help "'h' for help"
         gen (str "generation: " (:generation world))
-        cs-left (str "blobs left: " (- (count (:clusters world)) 1))
-        greed (str "greedy solver: " (:generation (solver/greedy-solve world user-cluster)))]
-    (put-ln 0 (reduce #(str %1 " - " %2) (list title help gen cs-left greed)))))
+        cs-left (str "blobs left: " (- (count (:clusters world)) 1))]
+    (put-ln 0 (reduce #(str %1 " - " %2) (list title help gen cs-left)))))
 
 (defn win []
   (w/show-window (get-scr)
@@ -62,7 +62,7 @@
   (all-black)
   (stats world)
   (draw world)
-  (when (l/won? world) (win))
+  (when (l/finished? world) (win))
   (s/redraw (get-scr)))
     
     
@@ -72,9 +72,10 @@
   (System/exit 0))
 
 (defn new-world []
-  (let [[w h] (s/get-size (get-scr))]
-    (l/gen-rand-world (floor (/ (- w 4) 2))
-                      (- h 3))))
+  (let [[w h] (s/get-size (get-scr))
+        w (l/gen-rand-world (floor (/ (- w 4) 2))
+                             (- h 3))]
+    (l/add-player (l/add-player w user-cluster) ki)))
 
 (defn show-help []
   (w/show-window (get-scr)
@@ -99,23 +100,13 @@
                  ["debug window"
                   (str "greedy solver: " (:generation (solver/greedy-solve w user-cluster)))
                   ""
-                  (str "r: " (l/adjacent-nodes w user-cluster :red))
-                  (str "g: " (l/adjacent-nodes w user-cluster :green))
-                  (str "b: " (l/adjacent-nodes w user-cluster :blue))
-                  (str "y: " (l/adjacent-nodes w user-cluster :yellow))
-                  (str "c: " (l/adjacent-nodes w user-cluster :cyan))
-                  (str "v: " (l/adjacent-nodes w user-cluster :magenta))])
+                  (str "r: " (solver/potential-gain w user-cluster :red))
+                  (str "g: " (solver/potential-gain w user-cluster :green))
+                  (str "b: " (solver/potential-gain w user-cluster :blue))
+                  (str "y: " (solver/potential-gain w user-cluster :yellow))
+                  (str "c: " (solver/potential-gain w user-cluster :cyan))
+                  (str "v: " (solver/potential-gain w user-cluster :magenta))])
   (s/get-key-blocking (get-scr)))
-
-(defn auto-solve [w]
-  (if (l/won? w) w
-      (do (redraw w)
-;          (show-debug w)
-          (Thread/sleep 30)
-          (let [color (reduce #(if (> (l/adjacent-nodes w user-cluster %2)
-                                      (l/adjacent-nodes w user-cluster %1)) %2 %1)
-                              (apply list (set (map #(l/color w %) (l/neighbors w user-cluster)))))]
-          (recur (l/colorize w user-cluster color))))))
 
 (defn handle-input [world]
   (redraw world)
@@ -126,7 +117,7 @@
       \h (do (show-help) (recur world))
       \? (do (show-help) (recur world))
       \d (do (show-debug world) (recur world))
-      \a (recur (auto-solve world))
+      \k (recur (solver/greedy-step world ki))
       \r (recur (l/colorize world user-cluster :red))
       \g (recur (l/colorize world user-cluster :green))
       \b (recur (l/colorize world user-cluster :blue))
@@ -136,7 +127,10 @@
       (recur world))))
 
 
-(defn handle-args [args]
+
+(defn handle-args
+  "handles command line parameters"
+  [args]
   (let [as (set args)]
     (if (contains? as "--swing")
       (set-scr (s/get-screen :swing))
@@ -152,5 +146,4 @@
   (s/get-key (get-scr)) ; workaround for tiling managers
   (redraw (new-world))
   (let [w (new-world)]
-    ; handle command line parameters
     (handle-input w)))
