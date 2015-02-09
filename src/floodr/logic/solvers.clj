@@ -1,5 +1,5 @@
-(ns floodr.solvers
-  (:require [floodr.logic :as l]))
+(ns floodr.logic.solvers
+  (:require [floodr.logic.world :as l]))
 
 
 
@@ -15,13 +15,14 @@
                                 (not (l/player-owned? w %)))
                           (l/neighbors w cluster))))
 
-(defn greedy-step [w cluster]
+(defn current-player-cluster
+  [w]
+  (l/cluster w (get (:players w) (:current-player w))))
+
+(defn greedy-move [w]
+  (let [cluster (current-player-cluster w)]
   (if (l/finished? w) w
       (do (let [color (reduce #(if (> (potential-gain w cluster %2)
                                       (potential-gain w cluster %1)) %2 %1)
                               (adjacent-colors w cluster))]
-            (l/colorize w cluster color)))))
-
-(defn greedy-solve [w cluster]
-  (if (l/finished? w) w
-      (recur (greedy-step w cluster) cluster)))
+            (l/player-move w color))))))

@@ -1,7 +1,7 @@
 (ns floodr.core
   (:require [lanterna.screen :as s]
-            [floodr.logic :as l]
-            [floodr.solvers :as solver]
+            [floodr.logic.world :as l]
+            [floodr.logic.solvers :as solver]
             [floodr.lanterna-window :as w])
   (:gen-class))
 
@@ -12,9 +12,7 @@
 
 ;;; Constants
 
-(def current-world)
 (def user-cluster 0)
-(def ki 50)
 
 ;;; screen
 
@@ -56,7 +54,8 @@
   (w/show-window (get-scr)
                  ["good job!"
                   " "
-                  "[q - quit] [s - new game]"] :centered))
+                  "[q - quit] [s - new game]"]
+                 {:centered true}))
 
 (defn redraw [world]
   (all-black)
@@ -71,11 +70,33 @@
   (s/stop (get-scr))
   (System/exit 0))
 
+;(def supported-players #{1 2 4})
+
+;(defn config-world [config]
+;  (w/show-window (get-scr)
+;                 ["start a new game"
+;                  ""
+;                  (str "players: " (:players config) "[p<N>] to change, where <N> = 1, 2 or 4")
+;                  (str "how many of these are AI: " (:ais config) "[a<N>] to change")
+;                  ""
+;                  "press [n] to start-game"])
+;  (case (w/get-valid (get-scr) #{\n \p \a})
+;    \n config
+;    \p (let [ps (w/get-digit (get-scr))]
+;         (if (contains? supported-players ps)
+;           (recur (l/set-vals config [:players ps])) (recur config)))
+;    \a (let [ais (w/get-digit (get-scr))]
+;         (if (contains? supported-players ais)
+;           (recur (l/set-vals config [:ais ais])) (recur config)))
+;    (recur config)))
+
 (defn new-world []
   (let [[w h] (s/get-size (get-scr))
-        w (l/gen-rand-world (floor (/ (- w 4) 2))
-                             (- h 3))]
-    (l/add-player (l/add-player w user-cluster) ki)))
+        w1 (l/gen-rand-world (floor (/ (- w 4) 2))
+                                (- h 3))
+        w2 (l/add-player w1)
+        w3 (l/add-player w2)]
+    w3))
 
 (defn show-help []
   (w/show-window (get-scr)
@@ -83,7 +104,7 @@
                   " "
                   "  q - quit"
                   "  h - show this help"
-                  "  s - start new game"
+                  "  n - start new game"
                   " "
                   "  r - red"
                   "  g - green"
@@ -98,7 +119,6 @@
 (defn show-debug [w]
   (w/show-window (get-scr)
                  ["debug window"
-                  (str "greedy solver: " (:generation (solver/greedy-solve w user-cluster)))
                   ""
                   (str "r: " (solver/potential-gain w user-cluster :red))
                   (str "g: " (solver/potential-gain w user-cluster :green))
@@ -113,17 +133,17 @@
   (let [key (s/get-key-blocking (get-scr))]
     (case key
       \q (recur (quit))
-      \s (recur (new-world))
+      \n (recur (new-world))
       \h (do (show-help) (recur world))
       \? (do (show-help) (recur world))
       \d (do (show-debug world) (recur world))
-      \k (recur (solver/greedy-step world ki))
-      \r (recur (l/colorize world user-cluster :red))
-      \g (recur (l/colorize world user-cluster :green))
-      \b (recur (l/colorize world user-cluster :blue))
-      \y (recur (l/colorize world user-cluster :yellow))
-      \c (recur (l/colorize world user-cluster :cyan))
-      \v (recur (l/colorize world user-cluster :magenta)) ; violet
+      \k (recur (solver/greedy-move world))
+      \r (recur (l/player-move world :red))
+      \g (recur (l/player-move world :green))
+      \b (recur (l/player-move world :blue))
+      \y (recur (l/player-move world :yellow))
+      \c (recur (l/player-move world :cyan))
+      \v (recur (l/player-move world :magenta)) ; violet
       (recur world))))
 
 
