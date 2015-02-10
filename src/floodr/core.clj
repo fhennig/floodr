@@ -2,6 +2,7 @@
   (:require [lanterna.screen :as s]
             [floodr.logic.world :as l]
             [floodr.logic.game :as g]
+            [floodr.logic.playing :as p]
             [floodr.logic.solvers :as solver]
             [floodr.lanterna-window :as w])
   (:gen-class))
@@ -44,7 +45,7 @@
   (let [title "floodr"
         help "'h' for help"
         gen (str "generation: " (:generation game))
-        cs-left (str "blobs left: " (- (count (:clusters (:world game))) (count (:players game))))]
+        cs-left (str "blobs left: " (g/clusters-left game))]
     (put-ln 0 (reduce #(str %1 " - " %2) (list title help gen cs-left)))))
 
 (defn show-winner [game]
@@ -92,11 +93,9 @@
 (defn new-game []
   (let [[w h] (s/get-size (get-scr))
         world (l/gen-rand-world (floor (/ (- w 4) 2))
-                                (- h 3))
-        game (g/new-game world)
-        g2 (g/add-player game)
-        g3 (g/add-player g2)]
-    (g/set-start-player g3)))
+                                (- h 3))]
+    (p/setup-players (g/new-game world) 2 1)))
+
 
 (defn show-help []
   (w/show-window (get-scr)
@@ -130,23 +129,24 @@
                   (str "v: " (solver/potential-gain game :magenta))])
   (s/get-key-blocking (get-scr)))
 
-(defn handle-input [game]
-  (redraw game)
-  (let [key (s/get-key-blocking (get-scr))]
-    (case key
-      \q (recur (quit))
-      \n (recur (new-game))
-      \h (do (show-help) (recur game))
-      \? (do (show-help) (recur game))
-      \d (do (show-debug game) (recur game))
-      \k (recur (solver/greedy-move game))
-      \r (recur (g/player-move game :red))
-      \g (recur (g/player-move game :green))
-      \b (recur (g/player-move game :blue))
-      \y (recur (g/player-move game :yellow))
-      \c (recur (g/player-move game :cyan))
-      \v (recur (g/player-move game :magenta)) ; violet
-      (recur game))))
+(defn handle-input [g]
+  (let [game (p/move-ais g)]
+    (redraw game)
+    (let [key (s/get-key-blocking (get-scr))]
+      (case key
+        \q (recur (quit))
+        \n (recur (new-game))
+        \h (do (show-help) (recur game))
+        \? (do (show-help) (recur game))
+        \d (do (show-debug game) (recur game))
+        \k (recur (solver/greedy-move game))
+        \r (recur (g/player-move game :red))
+        \g (recur (g/player-move game :green))
+        \b (recur (g/player-move game :blue))
+        \y (recur (g/player-move game :yellow))
+        \c (recur (g/player-move game :cyan))
+        \v (recur (g/player-move game :magenta)) ; violet
+        (recur game)))))
 
 
 

@@ -1,5 +1,12 @@
 (ns floodr.test-data)
 
+(def test-init-world
+  {:w 2 :h 2
+   :clusters #{0 1 2 3}
+   :parents {0 0, 1 1, 2 2, 3 3}
+   :colors {0 :red, 1 :green, 2 :blue, 3 :yellow}
+   :sizes {0 1, 1 1, 2 1, 3 1}})
+
 (def test-world1
   "typical 3 * 3 world. (1, 3, 4) and (7, 8) are clusters"
   {:w 3 :h 3
@@ -15,7 +22,8 @@
 (def test-game1
   {:world test-world1
    :generation 1
-   :players {0 0, 1 8}
+   :player-info {0 "Player 1", 1 "Player 2"}
+   :player-clusters {0 0, 1 8}
    :current-player 0})
 
 (def test-game2
@@ -26,5 +34,6 @@
            :colors {0 :red}
            :sizes {0 4}}
    :generation 3
-   :players {0 0, 1 3}
+   :player-info {0 "Player 1", 1 "Player 2"}
+   :player-clusters {0 0, 1 3}
    :current-player 0})

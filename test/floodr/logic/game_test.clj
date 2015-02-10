@@ -9,9 +9,9 @@
 
 (deftest test-add-player
   (let [tg1 t/test-game1
-        tg2 (add-player tg1)]
-    (is (= (+ 1 (count (:players tg1)))
-           (count (:players tg2))))))
+        tg2 (add-player tg1 "Player 3")]
+    (is (= (+ 1 (player-count tg1))
+           (player-count tg2)))))
 
 (deftest test-player-move
   (let [tg1 t/test-game1
@@ -28,6 +28,14 @@
     (= 0 (best-player tg2))
     (= 1 (worst-player tg2))))
 
+(deftest test-set-start-player
+  (let [init-game (add-player (new-game t/test-init-world) "Player 1")]
+    (is (not (nil? (:current-player (set-start-player init-game)))))))
+
+(deftest test-clusters-left
+  (is (= 0 (clusters-left t/test-game2)))
+  (is (= 4 (clusters-left t/test-game1)))
+  (is (= 3 (clusters-left (player-move t/test-game1 :green)))))
 (deftest test-finished?
   (is (not (finished? t/test-game1)))
   (is (finished? t/test-game2)))
