@@ -1,18 +1,15 @@
 (ns floodr.core
   (:require [lanterna.screen :as s]
             [floodr.logic.world :as l]
+            [floodr.logic.game :as g]
             [floodr.logic.solvers :as solver]
             [floodr.lanterna-window :as w])
   (:gen-class))
 
-;;; util
+;;; util ; TODO move to floodr.util
 
 (defn floor [x]
   (int (Math/floor x)))
-
-;;; Constants
-
-(def user-cluster 0)
 
 ;;; screen
 
@@ -43,25 +40,27 @@
       (s/put-string (get-scr) (+ (* 2 (mod i w)) off-x) (+ (quot i w) off-y)
                     "  " {:bg (color i)}))))
 
-(defn stats [world]
+(defn stats [game]
   (let [title "floodr"
         help "'h' for help"
-        gen (str "generation: " (:generation world))
-        cs-left (str "blobs left: " (- (count (:clusters world)) 1))]
+        gen (str "generation: " (:generation game))
+        cs-left (str "blobs left: " (- (count (:clusters (:world game))) (count (:players game))))]
     (put-ln 0 (reduce #(str %1 " - " %2) (list title help gen cs-left)))))
 
-(defn win []
+(defn show-winner [game]
   (w/show-window (get-scr)
-                 ["good job!"
-                  " "
-                  "[q - quit] [s - new game]"]
+                 ["game over"
+                  ""
+                  (str "player " (g/best-player game) " won!")
+                  ""
+                  "[q - quit] [n - new game]"]
                  {:centered true}))
 
-(defn redraw [world]
+(defn redraw [game]
   (all-black)
-  (stats world)
-  (draw world)
-  (when (l/finished? world) (win))
+  (stats game)
+  (draw (:world game))
+  (when (g/finished? game) (show-winner game))
   (s/redraw (get-scr)))
     
     
@@ -90,13 +89,14 @@
 ;           (recur (l/set-vals config [:ais ais])) (recur config)))
 ;    (recur config)))
 
-(defn new-world []
+(defn new-game []
   (let [[w h] (s/get-size (get-scr))
-        w1 (l/gen-rand-world (floor (/ (- w 4) 2))
+        world (l/gen-rand-world (floor (/ (- w 4) 2))
                                 (- h 3))
-        w2 (l/add-player w1)
-        w3 (l/add-player w2)]
-    w3))
+        game (g/new-game world)
+        g2 (g/add-player game)
+        g3 (g/add-player g2)]
+    (g/set-start-player g3)))
 
 (defn show-help []
   (w/show-window (get-scr)
@@ -116,35 +116,37 @@
                   "press any key to continue"])
   (s/get-key-blocking (get-scr)))
 
-(defn show-debug [w]
+(defn show-debug [game]
   (w/show-window (get-scr)
                  ["debug window"
                   ""
-                  (str "r: " (solver/potential-gain w user-cluster :red))
-                  (str "g: " (solver/potential-gain w user-cluster :green))
-                  (str "b: " (solver/potential-gain w user-cluster :blue))
-                  (str "y: " (solver/potential-gain w user-cluster :yellow))
-                  (str "c: " (solver/potential-gain w user-cluster :cyan))
-                  (str "v: " (solver/potential-gain w user-cluster :magenta))])
+                  (str (g/worst-player game))
+                  (str (:current-player game))
+                  (str "r: " (solver/potential-gain game :red)) ; FIXME
+                  (str "g: " (solver/potential-gain game :green))
+                  (str "b: " (solver/potential-gain game :blue))
+                  (str "y: " (solver/potential-gain game :yellow))
+                  (str "c: " (solver/potential-gain game :cyan))
+                  (str "v: " (solver/potential-gain game :magenta))])
   (s/get-key-blocking (get-scr)))
 
-(defn handle-input [world]
-  (redraw world)
+(defn handle-input [game]
+  (redraw game)
   (let [key (s/get-key-blocking (get-scr))]
     (case key
       \q (recur (quit))
-      \n (recur (new-world))
-      \h (do (show-help) (recur world))
-      \? (do (show-help) (recur world))
-      \d (do (show-debug world) (recur world))
-      \k (recur (solver/greedy-move world))
-      \r (recur (l/player-move world :red))
-      \g (recur (l/player-move world :green))
-      \b (recur (l/player-move world :blue))
-      \y (recur (l/player-move world :yellow))
-      \c (recur (l/player-move world :cyan))
-      \v (recur (l/player-move world :magenta)) ; violet
-      (recur world))))
+      \n (recur (new-game))
+      \h (do (show-help) (recur game))
+      \? (do (show-help) (recur game))
+      \d (do (show-debug game) (recur game))
+      \k (recur (solver/greedy-move game))
+      \r (recur (g/player-move game :red))
+      \g (recur (g/player-move game :green))
+      \b (recur (g/player-move game :blue))
+      \y (recur (g/player-move game :yellow))
+      \c (recur (g/player-move game :cyan))
+      \v (recur (g/player-move game :magenta)) ; violet
+      (recur game))))
 
 
 
@@ -164,6 +166,6 @@
   (handle-args args)
   (s/start (get-scr))
   (s/get-key (get-scr)) ; workaround for tiling managers
-  (redraw (new-world))
-  (let [w (new-world)]
+  (redraw (new-game)) ; FIXME
+  (let [w (new-game)]
     (handle-input w)))

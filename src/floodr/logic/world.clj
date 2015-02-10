@@ -4,7 +4,7 @@
 
 
 
-(defn parent
+(defn- parent
   [w n]
   (get (:parents w) n))
 
@@ -19,7 +19,7 @@
   [w & nodes]
     (set (map #(cluster w %) nodes)))
 
-(defn path
+(defn- path
   "mainly used for debugging, returns the path that the node takes
   to determine its cluster"
   [w n]
@@ -34,6 +34,10 @@
   [w node]
   (get (:colors w) (cluster w node)))
 
+(defn has-color?
+  [w c col]
+  (= (color w c) col))
+
 (defn size
   "gets the accumulated size of the given clusters, without duplicates"
   [w & nodes]
@@ -46,97 +50,37 @@
   (set (map #(cluster world %)
             (get (:neighbors world) (cluster world node)))))
 
-(defn player-owned?
-  [w c]
-  (let [ps (apply clusters w (vals (:players w)))]
-    (contains? ps (cluster w c))))
-
-(defn has-color?
-  [w c col]
-  (= (color w c) col))
-
-(defn mergeable-neighbors
-  "returns the clusters that are adjacent and of the same color"
-  [w cluster]
-  (let [c-col (color w cluster)]
-    (filter #(and (not (player-owned? w %))
-                  (has-color? w % c-col))
-            (neighbors w cluster))))
-  
-(defn merge-clusters
+(defn- merge-clusters-h
   "returns a new world where c1 and c2 are merged"
   [w n1 n2]
-  (let [c1 (cluster w n1) c2 (cluster w n2)
-        cs (if (> (size w c1) (size w c2)) c2 c1) ; smaller cluster
-        cb (if (> (size w c1) (size w c2)) c1 c2)] ; bigger cluster
-    (update-vals w [:clusters disj cs]
-                 [:parents assoc cs cb]
-                 [:neighbors assoc cb (set/union (disj (neighbors w cs) cb)
-                                                 (disj (neighbors w cb) cs))]
-                 [:neighbors dissoc cs]
-                 [:colors dissoc cs]
-                 [:sizes assoc cb (+ (size w cs) (size w cb))]
-                 [:sizes dissoc cs])))
+  (let [c1 (cluster w n1), c2 (cluster w n2)]
+    (if (= c1 c2) w
+        (let [[cs cb] (sort-by #(size w %) [c1 c2])]
+          (update-vals w [:neighbors assoc cb (set/union (disj (neighbors w cs) cb)
+                                                         (disj (neighbors w cb) cs))]
+                       [:sizes assoc cb (+ (size w cs) (size w cb))]
+                       [:parents assoc cs cb]
+                       [:neighbors dissoc cs]
+                       [:sizes dissoc cs]
+                       [:colors dissoc cs]
+                       [:clusters disj cs])))))
 
-(defn merge-neighbors
-  "merges all mergeable neighbors"
-  [w c]
-  (reduce #(merge-clusters %1 (cluster %1 c) %2)
-          w (mergeable-neighbors w c)))
+(defn merge-clusters
+  "merges any number of clusters"
+  [w c1 & cr]
+  (reduce #(merge-clusters-h %1 c1 %2) w cr))
 
-(defn colorize
-  "changes the color of the given cluster and merges its neighbors"
-  [w clust color]
-  (let [c (cluster w clust)
-        nw (update-vals w [:colors assoc c color])]
-    (merge-neighbors nw c)))
-
-;;; player related functions
-
-(defn- gen-player-node
-  [world player]
-  (coords->index (:w world)
-                 (case player
-                   0 [0 0] ; top left
-                   1 [(- (:w world) 1) (- (:h world) 1)] ; bot right
-                   2 [(- (:w world) 1) 0] ; top right
-                   3 [0 (- (:h world) 1)] ; bot left
-                   nil)))
-
-(defn add-player
-  "adds a player to the given world. up to 4 players supported"
-  [world]
-  (let [player-id (count (:players world))
-        player-cluster (gen-player-node world player-id)]
-    (update-vals world [:players assoc player-id player-cluster])))
-
-(defn player-move
-  "lets the current player colorize his cluster in the given color"
-  [w color]
-  (let [player-cluster (get (:players w) (:current-player w))]
-    (update-vals (colorize w player-cluster color) [:generation inc]
-                 [:current-player #(mod (inc %) (count (:players w)))])))
-
-;;; WORLD STUFF
+;;; world definition
 
 (def colors '(:red :green :blue :yellow :cyan :magenta))
 
 (def empty-world
   {:w 0 :h 0 ; used within the UI
-   :generation 0 ; how many colorize operations were done on this world
    :clusters #{} ; the clusters that exist
    :parents {} ; maps nodes to their parents; used to get the cluster of a node
    :neighbors {} ; what neighbors does a cluster have
    :colors {} ; what color does a cluster have
-   :sizes {} ; size of the clusters
-   :players {} ; map of player-id to the node of the player
-   :current-player 0})
-
-;;; functions that operate on a world
-
-(defn finished? [world]
-  (= (count (:clusters world))
-     (count (:players world))))
+   :sizes {}}) ; size of the clusters
 
 ;;; World generation
 
@@ -164,8 +108,12 @@
   (list [(dec x) (dec y)] [x (dec y)] [(inc x) (dec y)] [(dec x) y]
         [(inc x) y] [(dec x) (inc y)] [x (inc y)] [(inc x) (inc y)]))
 
+(defn- colorize
+  [w c]
+  (let [col (color w c)]
+    (apply merge-clusters w c (filter #(has-color? w % col) (neighbors w c)))))
 
-(defn gen-rand-world
+(defn gen-rand-world ;; TODO add parameter what neighbor function to use
   [width height]
   (let [nodes (range (* width height))
         ki (- (* width height) 1)
@@ -177,5 +125,5 @@
                         (gen-neighbors width height node neighbors-4)
                         (rand-nth colors)))
         w1 (reduce add init-world nodes)
-        w2 (reduce #(colorize %1 %2 (color %1 %2)) w1 nodes)]
+        w2 (reduce #(colorize %1 %2) w1 nodes)]
     w2))
