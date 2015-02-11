@@ -114,16 +114,22 @@
     (apply merge-clusters w c (filter #(has-color? w % col) (neighbors w c)))))
 
 (defn gen-rand-world ;; TODO add parameter what neighbor function to use
-  [width height]
+  [width height neighbor-type]
   (let [nodes (range (* width height))
-        ki (- (* width height) 1)
+        n-fn (case neighbor-type
+               :4 neighbors-4
+               :8 neighbors-8)
         init-world (set-vals empty-world
                              [:w width]
                              [:h height])
         add (fn [world node]
               (add-node world node
-                        (gen-neighbors width height node neighbors-4)
+                        (gen-neighbors width height node n-fn)
                         (rand-nth colors)))
         w1 (reduce add init-world nodes)
         w2 (reduce #(colorize %1 %2) w1 nodes)]
+;        x (rand-nth (apply list (:clusters w2)))
+;        y (rand-nth (apply list (:clusters w2)))
+;    (apply merge-clusters w2 x (neighbors w2 x))))
+;    (merge-clusters w2 x y)))
     w2))

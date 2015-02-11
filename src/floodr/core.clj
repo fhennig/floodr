@@ -1,16 +1,12 @@
 (ns floodr.core
   (:require [lanterna.screen :as s]
+            [floodr.util :refer :all]
             [floodr.logic.world :as l]
             [floodr.logic.game :as g]
             [floodr.logic.playing :as p]
             [floodr.logic.solvers :as solver]
             [floodr.lanterna-window :as w])
   (:gen-class))
-
-;;; util ; TODO move to floodr.util
-
-(defn floor [x]
-  (int (Math/floor x)))
 
 ;;; screen
 
@@ -48,124 +44,177 @@
         cs-left (str "blobs left: " (g/clusters-left game))]
     (put-ln 0 (reduce #(str %1 " - " %2) (list title help gen cs-left)))))
 
-(defn show-winner [game]
-  (w/show-window (get-scr)
+(defn put-title []
+  (s/put-string (get-scr) 2 0 "f" {:fg :red})
+  (s/put-string (get-scr) 3 0 "l" {:fg :green})
+  (s/put-string (get-scr) 4 0 "o" {:fg :blue})
+  (s/put-string (get-scr) 5 0 "o" {:fg :cyan})
+  (s/put-string (get-scr) 6 0 "d" {:fg :magenta})
+  (s/put-string (get-scr) 7 0 "r" {:fg :yellow}))
+
+(defn put-winner [game] ;; TODO rename put-winner-window and call redraw at call points
+  (w/put-window (get-scr)
                  ["game over"
                   ""
-                  (str "player " (g/best-player game) " won!")
+                  (str (p/get-leader game) " won!")
                   ""
                   "[q - quit] [n - new game]"]
                  {:centered true}))
 
-(defn redraw [game]
+(defn put-main-window [game]
   (all-black)
   (stats game)
-  (draw (:world game))
-  (when (g/finished? game) (show-winner game))
-  (s/redraw (get-scr)))
-    
-    
+  (put-title)
+  (when-not (nil? game)
+    (draw (:world game)))
+  (when (g/finished? game)
+    (put-winner game))) ;; TODO possibly wrong here
 
-(defn quit []
-  (s/stop (get-scr))
-  (System/exit 0))
-
-;(def supported-players #{1 2 4})
-
-;(defn config-world [config]
-;  (w/show-window (get-scr)
-;                 ["start a new game"
-;                  ""
-;                  (str "players: " (:players config) "[p<N>] to change, where <N> = 1, 2 or 4")
-;                  (str "how many of these are AI: " (:ais config) "[a<N>] to change")
-;                  ""
-;                  "press [n] to start-game"])
-;  (case (w/get-valid (get-scr) #{\n \p \a})
-;    \n config
-;    \p (let [ps (w/get-digit (get-scr))]
-;         (if (contains? supported-players ps)
-;           (recur (l/set-vals config [:players ps])) (recur config)))
-;    \a (let [ais (w/get-digit (get-scr))]
-;         (if (contains? supported-players ais)
-;           (recur (l/set-vals config [:ais ais])) (recur config)))
-;    (recur config)))
-
-(defn new-game []
-  (let [[w h] (s/get-size (get-scr))
-        world (l/gen-rand-world (floor (/ (- w 4) 2))
-                                (- h 3))]
-    (p/setup-players (g/new-game world) 2 1)))
-
-
-(defn show-help []
-  (w/show-window (get-scr)
-                 ["controls:"
-                  " "
-                  "  q - quit"
-                  "  h - show this help"
-                  "  n - start new game"
-                  " "
-                  "  r - red"
-                  "  g - green"
-                  "  b - blue"
-                  "  c - cyan"
-                  "  v - violet"
-                  "  y - yellow"
-                  " " " "
-                  "press any key to continue"])
-  (s/get-key-blocking (get-scr)))
-
-(defn show-debug [game]
-  (w/show-window (get-scr)
+(defn put-debug [game]
+  (w/put-window (get-scr)
                  ["debug window"
                   ""
-                  (str (g/worst-player game))
+                  (str "currently winning: " (p/get-leader game))
                   (str (:current-player game))
-                  (str "r: " (solver/potential-gain game :red)) ; FIXME
+                  (str "r: " (solver/potential-gain game :red))
                   (str "g: " (solver/potential-gain game :green))
                   (str "b: " (solver/potential-gain game :blue))
-                  (str "y: " (solver/potential-gain game :yellow))
                   (str "c: " (solver/potential-gain game :cyan))
-                  (str "v: " (solver/potential-gain game :magenta))])
+                  (str "m: " (solver/potential-gain game :magenta))
+                  (str "y: " (solver/potential-gain game :yellow))])
   (s/get-key-blocking (get-scr)))
 
-(defn handle-input [g]
-  (let [game (p/move-ais g)]
-    (redraw game)
-    (let [key (s/get-key-blocking (get-scr))]
-      (case key
-        \q (recur (quit))
-        \n (recur (new-game))
-        \h (do (show-help) (recur game))
-        \? (do (show-help) (recur game))
-        \d (do (show-debug game) (recur game))
-        \k (recur (solver/greedy-move game))
-        \r (recur (g/player-move game :red))
-        \g (recur (g/player-move game :green))
-        \b (recur (g/player-move game :blue))
-        \y (recur (g/player-move game :yellow))
-        \c (recur (g/player-move game :cyan))
-        \v (recur (g/player-move game :magenta)) ; violet
-        (recur game)))))
+(defn quit [state]
+  (set-vals state [:quit true]))
 
+(defn valid-keys [options]
+  (set (keys options)))
 
+(defn do-action [key options action-params]
+  (let [action (:action (get options key))]
+    (apply action action-params)))
 
-(defn handle-args
-  "handles command line parameters"
-  [args]
-  (let [as (set args)]
-    (if (contains? as "--swing")
-      (set-scr (s/get-screen :swing))
-      (set-scr (s/get-screen :unix)))))
+(defn user-action [screen options & action-params]
+  (let [key (w/get-valid screen (valid-keys options))]
+    (do-action key options action-params)))
 
+(defn choose-amount-of-players [conf]
+  (let [options {\1 {:action #(set-vals % [:players 1])
+                     :desc "single player mode"}
+                 \2 {:action #(set-vals % [:players 2])
+                     :desc "two players"}
+                 \3 {:action #(set-vals % [:players 3])
+                     :desc "etc."}
+                 \4 {:action #(set-vals % [:players 4])
+                     :desc "..."}}
+        order [\1 \2 \3 \4]]
+    (w/put-options-window (get-scr) options order)
+    (s/redraw (get-scr))
+    (user-action (get-scr) options conf)))
 
+(defn change-neighbor-setup [conf]
+  (if (= (:neighbors conf) :4) (set-vals conf [:neighbors :8])
+      (set-vals conf [:neighbors :4])))
+
+(defn finish-setup [conf]
+  (set-vals conf [:setup-finished true]))
+
+(defn setup-config [scr conf]
+  (if (:setup-finished conf) conf
+      (let [options {\p {:action choose-amount-of-players
+                         :desc "choose amount of players (1 - 4)"}
+                     \s {:action change-neighbor-setup
+                         :desc "switch between 4 and 8 neighbors"}
+                     \n {:action finish-setup
+                         :desc "start a new game with this configuration"}}
+            order [\p \s :nl \n]]
+        (w/put-options-window scr options order "game configuration")
+        (w/put-status scr (str conf))
+        (s/redraw scr)
+        (recur scr (user-action (get-scr) options conf)))))
+
+(defn create-new-game [conf]
+  (p/setup-players (g/new-game (l/gen-rand-world (:w conf) (:h conf)
+                                                 (:neighbors conf)))
+                   (:players conf)
+                   (:ais conf)))
+
+(defn new-game [state]
+  (let [init-conf (set-vals (:game-conf state) [:setup-finished false])
+        conf (setup-config (:screen state) init-conf)]
+    (set-vals state
+              [:game (create-new-game conf)]
+              [:game-conf conf])))
+
+(defn p-move
+  "lets the current player make his move with the given color
+  and lets every AI that has to move after him move"
+  [state col]
+  (update-vals state
+               [:game g/player-move col]
+               [:game p/move-ais]))
+
+(defn put-help [s] s)
+
+(defn user-move [s]
+  (let [options {\q {:action quit
+                     :desc "quits the game"}
+                 \n {:action new-game
+                     :desc "start a new game"}
+                 \h {:action put-help ;; FIXME
+                     :desc "show a help message"}
+                 \s {:action #(p-move % :red)
+                     :desc "colorize your blob in red"}
+                 \d {:action #(p-move % :green)
+                     :desc "colorize your blob in green"}
+                 \f {:action #(p-move % :blue)
+                     :desc "colorize your blob in blue"}
+                 \j {:action #(p-move % :cyan)
+                     :desc "colorize your blob in cyan"}
+                 \k {:action #(p-move % :magenta)
+                     :desc "colorize your blob in magenta"}
+                 \l {:action #(p-move % :yellow)
+                     :desc "colorize your blob in yellow"}
+                 \c {:action #(p-move % (solver/greedy-select-col (:game %)))
+                     :desc "hidden"}
+                 \i {:action #(do (println %) %) ;; debug FIXME
+                     :desc "hidden"}}
+        order [\q \n \h :nl \s \d \f \j \k \l]]
+    (if (:quit s) s
+        (do (put-main-window (:game s))
+            (s/redraw (get-scr))
+            (recur (user-action (get-scr) options s))))))
+
+;;; init
+
+(defn- init-screen [args]
+  (let [scr (if (contains? (set args) "--swing")
+              (s/get-screen :swing)
+              (s/get-screen :unix))]
+    (s/start scr)
+    (s/get-key scr) ; HACK to fix size
+    (s/redraw scr)
+    (set-scr scr) ; TODO remove this line
+    scr))
+
+(defn- init-state [args]
+  (let [screen (init-screen args)
+        [sw sh] (s/get-size screen)
+        w (floor (/ (- sw 4) 2))
+        h (- sh 3)
+        init-game-conf {:w w :h h
+                        :players 2
+                        :ais 1
+                        :neighbors :4}
+        i-state {:game (create-new-game init-game-conf)
+                 :game-conf init-game-conf
+                 :screen screen}]
+    i-state))
+
+(defn- destruct-state [state]
+  (s/stop (:screen state)))
 
 (defn -main
   "Nothing to see here."
   [& args]
-  (handle-args args)
-  (s/start (get-scr))
-  (s/get-key (get-scr)) ; workaround for tiling managers
-  (redraw (new-game)) ; FIXME
-  (let [w (new-game)]
-    (handle-input w)))
+  (destruct-state (user-move (init-state args))))

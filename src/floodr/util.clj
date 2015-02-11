@@ -1,6 +1,6 @@
 (ns floodr.util)
 
-;; changing struct maps
+;;; changing struct maps
 
 (defn change-state
   [f map & to-update]
@@ -11,7 +11,7 @@
 (def update-vals #(apply change-state update-in %&))
 (def set-vals #(apply change-state assoc-in %&))
 
-;; working with grid-graphs
+;;; working with grid-graphs
 
 (defn index->coords
   [w i]
@@ -25,3 +25,8 @@
   [w h [x y]]
   (and (<= 0 x) (< x w)
        (<= 0 y) (< y h)))
+
+;;; math
+
+(defn floor [x]
+  (int (Math/floor x)))

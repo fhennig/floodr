@@ -13,16 +13,21 @@
   "adds the given amount of players to the game and sets the start player"
   [game player-count ai-count]
   (if (= player-count 0) (g/set-start-player game)
-      (let [human-count (- player-count ai-count)]
+      (let [human-count (- player-count ai-count)
+            p-nr (inc (g/player-count game))]
         (if (> human-count 0)
-          (recur (g/add-player game (new-player (str "Player " (inc (g/player-count game)))
+          (recur (g/add-player game (new-player (str "Human (" p-nr ")")
                                                 :human))
                  (dec player-count) ai-count)
-          (recur (g/add-player game (new-player (str "Computer") :ai))
+          (recur (g/add-player game (new-player (str "Computer (" p-nr ")") :ai))
                  (dec player-count) (dec ai-count))))))
+
+(defn get-leader [g]
+  (get (get (:player-info g) (g/best-player g)) :name))
 
 (defn move-ais
   [game]
   (let [c-player (get (:player-info game) (:current-player game))]
-    (if (= (:type c-player) :human) game
-        (recur (ai/greedy-move game)))))
+    (cond (= (:type c-player) :human) game
+          (g/finished? game) game
+          :else (recur (ai/greedy-move game)))))

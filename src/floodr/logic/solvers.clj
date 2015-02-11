@@ -15,10 +15,14 @@
                                          (not (g/player-owned? g %)))
                                    (l/neighbors (:world g) (g/current-player-cluster g)))))
 
-(defn random-move [g]
-  (g/player-move g (rand-nth l/colors)))
+(defn- can-move? [g]
+  (> (count (filter #(not (g/player-owned? g %))
+                    (l/neighbors (:world g) (g/current-player-cluster g))))
+     0))
+
+(defn greedy-select-col [g]
+  (if (not (can-move? g)) (rand-nth l/colors)
+      (apply max-key #(potential-gain g %) l/colors)))
 
 (defn greedy-move [g]
-  (if (g/finished? g) (random-move g) ;; TODO 
-      (do (let [color (apply max-key #(potential-gain g %) l/colors)]
-            (g/player-move g color)))))
+  (g/player-move g (greedy-select-col g)))
