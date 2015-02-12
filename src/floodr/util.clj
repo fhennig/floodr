@@ -31,6 +31,18 @@
 (defn floor [x]
   (int (Math/floor x)))
 
+;;; converting chars and digits
+
+(defn char->digit
+  "returns the digit represented by the char or nil"
+  [c]
+  (- (int c) 48))
+
+(defn digit->char
+  "returns the digit as a character"
+  [d]
+  (char (+ d 48)))
+
 ;;; misc
 
 (defn no-op [& [x]] x)

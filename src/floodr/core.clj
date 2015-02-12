@@ -84,17 +84,40 @@
 
 ;;; user interaction 
 
+(defn max-ai-count [conf]
+  (dec (:players conf)))
+
+(defn update-player-count [conf pc]
+  (let [nc (set-vals conf [:players pc]) 
+        ais (min (:ais conf) (max-ai-count nc))]
+    (set-vals nc [:ais ais])))
+
 (defn choose-amount-of-players [draw-fn conf]
-  (draw-fn {\1 {:action #(set-vals % [:players 1])
+  (draw-fn {\1 {:action #(update-player-count % 1)
                 :desc "single player mode"}
-            \2 {:action #(set-vals % [:players 2])
+            \2 {:action #(update-player-count % 2)
                 :desc "two players"}
-            \3 {:action #(set-vals % [:players 3])
+            \3 {:action #(update-player-count % 3)
                 :desc "etc."}
-            \4 {:action #(set-vals % [:players 4])
+            \4 {:action #(update-player-count % 4)
                 :desc "..."}}
            [\1 \2 \3 \4]
            conf))
+
+(defn build-ai-opts [max-count]
+  (let [opts (for [i (range 1 (inc max-count))
+                   :let [opt [(digit->char i)
+                              {:action #(set-vals % [:ais i])
+                               :desc (str i (if (= 1 i) " AI" " AIs"))}]]] opt)
+        options (into {} opts)
+        text (map first opts)]
+    [options text]))
+
+(defn choose-ai-count [draw-fn conf]
+  (if (= (:players conf) 1) conf ; there has to be at least one human
+      (let [[opts text] (build-ai-opts (max-ai-count conf))]
+        (draw-fn opts text conf))))
+        
 
 (defn change-neighbor-setup [conf]
   (if (= (:neighbors conf) :4) (set-vals conf [:neighbors :8])
@@ -106,6 +129,8 @@
 (defn setup-config [draw-fn conf]
   (draw-fn  {\p {:action #(choose-amount-of-players draw-fn %)
                  :desc "choose amount of players (1 - 4)"}
+             \a {:action #(choose-ai-count draw-fn %)
+                 :desc (str "choose amount of AIs (0 - " (max-ai-count conf) ")")}
              \s {:action change-neighbor-setup
                  :desc "switch between 4 and 8 neighbors"}
              \n {:action finish-setup
@@ -116,7 +141,7 @@
              (str "neighbors: " (case (:neighbors conf)
                                   :4 "direct"
                                   :8 "direct and diagonal"))
-             "" \p \s "" \n]
+             "" \p \a \s "" \n]
             conf))
 
 (defn create-new-game [conf]
