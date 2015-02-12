@@ -2,9 +2,29 @@
   (:require [lanterna.screen :as s]
             [floodr.util :refer :all]))
 
-;;; drawing windows
+;;; padding 
 
 (defn- space [n] (apply str (repeat n " ")))
+
+(defn- pad [s len centered]
+  (let [pad-len (- len (count s))
+        pad-f (if centered (space (floor (/ pad-len 2))) "")
+        pad-b (space (- pad-len (count pad-f)))]
+      (str pad-f s pad-b)))
+
+(defn- pad-lines [lines]
+  (let [line-width (apply max (map count lines))]
+    (map #(pad % line-width false) lines)))
+
+;;; clearing the screen
+
+(defn all-black [screen]
+  (let [[w h] (s/get-size screen)]
+    (doseq [y (range h)]
+      (doseq [x (range w)]
+        (s/put-string screen x y " ")))))
+
+;;; drawing windows
 
 (defn- put-lines [screen width lines]
   (let [height (count lines)
@@ -24,34 +44,20 @@
     (doseq [i (range (+ y b-t height) (+ y b-t height b-b))]
       (put-ln i empty-ln))))
 
-(defn- pad [s len centered]
-  (let [pad-len (- len (count s))
-        pad-f (if centered (space (floor (/ pad-len 2))) "")
-        pad-b (space (- pad-len (count pad-f)))]
-      (str pad-f s pad-b)))
+(defn- line->string [line key-descs]
+  (cond (string? line) line
+        (char? line) (str line " - " (:desc (get key-descs line)))))
 
-(defn put-window
-  "displays a window, centered in the screen containing the given lines.
-  a map of options can be passed. valid options are:
-  :centered bool - determines if the text should be centered"
-    [screen lines & [options]]
-  (let [line-width (apply max (map count lines))
-          padded-lines (map #(pad % line-width (:centered options)) lines)]
-    (put-lines screen line-width padded-lines)))
+(defn put-window [screen & [lines key-descs]]
+  "displays a window containing the given lines
+   a line may be a single character if a key-description is provided"
+  (when-not (nil? lines)
+    (let [ls (map #(line->string % key-descs) lines)
+          ls-padded (pad-lines ls)
+          width (count (first ls-padded))]
+      (put-lines screen width ls-padded))))
 
-(defn- key->string [key options]
-  (if (= key :nl) ""
-      (str key " - " (:desc (get options key)))))
-
-(defn put-options-window
-  "shows a window with an optional title that displays the given options"
-  [screen options order & [title]]
-  (let [option-lines (map #(key->string % options) order)
-        lines (if (nil? title) option-lines
-                  (into [] (concat [title ""] option-lines)))]
-    (put-window screen lines)))
-
-;;; drawing the status line
+;;; drawing the status line (currently unused)
 
 (defn put-status
   [screen status]
@@ -66,18 +72,9 @@
 ;;; getting user input
 
 (defn get-valid
-  [screen valid-input]
-  (let [key (s/get-key-blocking screen)
-        pred (if (set? valid-input)
-               #(contains? valid-input %) valid-input)]
-    (if (pred key) key
-        (recur screen valid-input))))
-
-;(defn char->digit [char]
-;  (let [i (- (int char) 48)]
-;    (if (and (> i -1) (< i 10)) i nil)))
-;
-;(defn get-digit
-;  [screen]
-;  (char->digit (get-valid screen
-;                          #(not (= nil (char->digit %))))))
+  "gets key input from the user. retries until a key is
+  given that is contained in the given set of valid keys"
+  [screen valid-keys]
+  (let [key (s/get-key-blocking screen)]
+    (if (contains? valid-keys key) key
+        (recur screen valid-keys))))

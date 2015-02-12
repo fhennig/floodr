@@ -17,12 +17,6 @@
 
 ;;; drawing
 
-(defn all-black []
-  (let [[w h] (s/get-size (get-scr))]
-    (doseq [y (range h)]
-      (doseq [x (range w)]
-        (s/put-string (get-scr) x y " ")))))
-
 (defn put-ln [line str]
   (if (or (pos? line) (= 0 line))
     (s/put-string (get-scr) 2 line str)
@@ -52,37 +46,12 @@
   (s/put-string (get-scr) 6 0 "d" {:fg :magenta})
   (s/put-string (get-scr) 7 0 "r" {:fg :yellow}))
 
-(defn put-winner [game] ;; TODO rename put-winner-window and call redraw at call points
-  (w/put-window (get-scr)
-                 ["game over"
-                  ""
-                  (str (p/get-leader game) " won!")
-                  ""
-                  "[q - quit] [n - new game]"]
-                 {:centered true}))
-
 (defn put-main-window [game]
-  (all-black)
+  (w/all-black (get-scr))
   (stats game)
   (put-title)
   (when-not (nil? game)
-    (draw (:world game)))
-  (when (g/finished? game)
-    (put-winner game))) ;; TODO possibly wrong here
-
-(defn put-debug [game]
-  (w/put-window (get-scr)
-                 ["debug window"
-                  ""
-                  (str "currently winning: " (p/get-leader game))
-                  (str (:current-player game))
-                  (str "r: " (solver/potential-gain game :red))
-                  (str "g: " (solver/potential-gain game :green))
-                  (str "b: " (solver/potential-gain game :blue))
-                  (str "c: " (solver/potential-gain game :cyan))
-                  (str "m: " (solver/potential-gain game :magenta))
-                  (str "y: " (solver/potential-gain game :yellow))])
-  (s/get-key-blocking (get-scr)))
+    (draw (:world game))))
 
 (defn quit [state]
   (set-vals state [:quit true]))
@@ -98,6 +67,21 @@
   (let [key (w/get-valid screen (valid-keys options))]
     (do-action key options action-params)))
 
+(defn draw-and-action
+  "takes:
+  - a screen to draw on and to read input from
+  - a function to clear the screen
+  - a map with keys to actions
+  - optionally lines of text that should be displayed to the user
+  - optional parameters to the actions definied earlier
+  returns:
+  - the result of applying the optional parameters to one of the actions"
+  [screen clear-fn options & [lines & action-params]]
+  (clear-fn)
+  (w/put-window screen lines options)
+  (s/redraw screen)
+  (apply user-action screen options action-params))
+
 (defn choose-amount-of-players [conf]
   (let [options {\1 {:action #(set-vals % [:players 1])
                      :desc "single player mode"}
@@ -108,7 +92,7 @@
                  \4 {:action #(set-vals % [:players 4])
                      :desc "..."}}
         order [\1 \2 \3 \4]]
-    (w/put-options-window (get-scr) options order)
+    (w/put-window (get-scr) order options)
     (s/redraw (get-scr))
     (user-action (get-scr) options conf)))
 
@@ -127,9 +111,14 @@
                          :desc "switch between 4 and 8 neighbors"}
                      \n {:action finish-setup
                          :desc "start a new game with this configuration"}}
-            order [\p \s :nl \n]]
-        (w/put-options-window scr options order "game configuration")
-        (w/put-status scr (str conf))
+            window-text ["game configuration" "" 
+                         (str "players:   " (:players conf))
+                         (str "AIs:       " (:ais conf))
+                         (str "neighbors: " (case (:neighbors conf)
+                                              :4 "direct"
+                                              :8 "direct and diagonal"))
+                         "" \p \s "" \n]]
+        (w/put-window scr window-text options)
         (s/redraw scr)
         (recur scr (user-action (get-scr) options conf)))))
 
@@ -146,44 +135,91 @@
               [:game (create-new-game conf)]
               [:game-conf conf])))
 
+(defn show-winner [state]
+  (draw-and-action (:screen state)
+                   #(put-main-window (:game state))
+                   {\r {:action #(set-vals % [:game (create-new-game (:game-conf %))])
+                        :desc "start new game"}
+                    \n {:action new-game
+                        :desc "configure a new game"}
+                    \q {:action quit
+                        :desc "quit"}}
+                   ["game over" ""
+                    (str (p/get-leader (:game state)) " won!") ""
+                    \r \n \q]
+                   state))
+
+(defn with-close-option [& [options]]
+  (let [opts (if options options {})]
+    (assoc opts \c {:action no-op
+                    :desc "close"})))
+
+(defn show-debug [state]
+  (draw-and-action (:screen state)
+                   #(put-main-window (:game state))
+                   (with-close-option)
+                   ["debug window"
+                    ""
+                    (str "currently winning: " (p/get-leader (:game state)))
+                    ""
+                    (str "r: " (solver/potential-gain (:game state) :red))
+                    (str "g: " (solver/potential-gain (:game state) :green))
+                    (str "b: " (solver/potential-gain (:game state) :blue))
+                    (str "c: " (solver/potential-gain (:game state) :cyan))
+                    (str "m: " (solver/potential-gain (:game state) :magenta))
+                    (str "y: " (solver/potential-gain (:game state) :yellow))
+                    "" \c]
+                   state))
+
+(defn show-help [draw-fn options]
+  (draw-fn (with-close-option options)
+           ["controls" ""
+            \q \n "" \s \d \f \j \k \l "" \c]))
+
+(defn options-with-help [draw-fn options]
+  (let [no-op-options (into {} (map (fn [[k v]]
+                                      [k (assoc v :action no-op)])
+                                    options))]
+    (assoc options \h {:action #(do (show-help draw-fn
+                                               no-op-options) %)
+                       :desc "hidden"})))
+
 (defn p-move
   "lets the current player make his move with the given color
   and lets every AI that has to move after him move"
   [state col]
-  (update-vals state
-               [:game g/player-move col]
-               [:game p/move-ais]))
-
-(defn put-help [s] s)
+  (let [ns (update-vals state
+                        [:game g/player-move col]
+                        [:game p/move-ais])]
+    (if (g/finished? (:game ns))
+      (show-winner ns)
+      ns)))
 
 (defn user-move [s]
-  (let [options {\q {:action quit
-                     :desc "quits the game"}
-                 \n {:action new-game
-                     :desc "start a new game"}
-                 \h {:action put-help ;; FIXME
-                     :desc "show a help message"}
-                 \s {:action #(p-move % :red)
-                     :desc "colorize your blob in red"}
-                 \d {:action #(p-move % :green)
-                     :desc "colorize your blob in green"}
-                 \f {:action #(p-move % :blue)
-                     :desc "colorize your blob in blue"}
-                 \j {:action #(p-move % :cyan)
-                     :desc "colorize your blob in cyan"}
-                 \k {:action #(p-move % :magenta)
-                     :desc "colorize your blob in magenta"}
-                 \l {:action #(p-move % :yellow)
-                     :desc "colorize your blob in yellow"}
-                 \c {:action #(p-move % (solver/greedy-select-col (:game %)))
-                     :desc "hidden"}
-                 \i {:action #(do (println %) %) ;; debug FIXME
-                     :desc "hidden"}}
-        order [\q \n \h :nl \s \d \f \j \k \l]]
-    (if (:quit s) s
-        (do (put-main-window (:game s))
-            (s/redraw (get-scr))
-            (recur (user-action (get-scr) options s))))))
+  (if (:quit s) s
+      (let [draw-fn (fn [& args] (apply draw-and-action (:screen s) #(put-main-window (:game s)) args))]
+        (recur (draw-fn (options-with-help draw-fn
+                                           {\q {:action quit
+                                                :desc "quits the game"}
+                                            \n {:action new-game
+                                                :desc "start a new game"}
+                                            \s {:action #(p-move % :red)
+                                                :desc "colorize your blob in red"}
+                                            \d {:action #(p-move % :green)
+                                                :desc "colorize your blob in green"}
+                                            \f {:action #(p-move % :blue)
+                                                :desc "colorize your blob in blue"}
+                                            \j {:action #(p-move % :cyan)
+                                                :desc "colorize your blob in cyan"}
+                                            \k {:action #(p-move % :magenta)
+                                                :desc "colorize your blob in magenta"}
+                                            \l {:action #(p-move % :yellow)
+                                                :desc "colorize your blob in yellow"}
+                                            \c {:action #(p-move % (solver/greedy-select-col (:game %)))
+                                                :desc "hidden"}
+                                            \i {:action show-debug
+                                                :desc "hidden"}})
+                        nil s)))))
 
 ;;; init
 

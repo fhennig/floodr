@@ -30,3 +30,7 @@
 
 (defn floor [x]
   (int (Math/floor x)))
+
+;;; misc
+
+(defn no-op [& [x]] x)
