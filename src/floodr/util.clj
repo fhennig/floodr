@@ -4,12 +4,12 @@
 
 (defn change-state
   [f map & to-update]
-  (reduce (fn [state [kw & actions]]
-            (apply f state [kw] actions))
+  (reduce (fn [state [kws & actions]]
+            (apply f state kws actions))
           map to-update))
 
-(def update-vals #(apply change-state update-in %&))
-(def set-vals #(apply change-state assoc-in %&))
+(def m-update-in #(apply change-state update-in %&))
+(def m-assoc-in #(apply change-state assoc-in %&))
 
 ;;; working with grid-graphs
 

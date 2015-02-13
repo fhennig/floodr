@@ -54,7 +54,7 @@
     (draw screen (:world game))))
 
 (defn quit [state]
-  (set-vals state [:quit true]))
+  (assoc-in state [:quit] true))
 
 (defn valid-keys [options]
   (set (keys options)))
@@ -88,12 +88,12 @@
   (dec (:players conf)))
 
 (defn update-player-count [conf pc]
-  (let [nc (set-vals conf [:players pc]) 
+  (let [nc (assoc-in conf [:players] pc) 
         ais (min (:ais conf) (max-ai-count nc))]
-    (set-vals nc [:ais ais])))
+    (assoc-in nc [:ais] ais)))
 
-(defn choose-amount-of-players [draw-fn conf]
-  (draw-fn {\1 {:action #(update-player-count % 1)
+(defn choose-amount-of-players [choose-opt conf]
+  (choose-opt {\1 {:action #(update-player-count % 1)
                 :desc "single player mode"}
             \2 {:action #(update-player-count % 2)
                 :desc "two players"}
@@ -107,29 +107,30 @@
 (defn build-ai-opts [max-count]
   (let [opts (for [i (range 1 (inc max-count))
                    :let [opt [(digit->char i)
-                              {:action #(set-vals % [:ais i])
+                              {:action #(assoc-in % [:ais] i)
                                :desc (str i (if (= 1 i) " AI" " AIs"))}]]] opt)
         options (into {} opts)
         text (map first opts)]
     [options text]))
 
-(defn choose-ai-count [draw-fn conf]
+(defn choose-ai-count [choose-opt conf]
   (if (= (:players conf) 1) conf ; there has to be at least one human
       (let [[opts text] (build-ai-opts (max-ai-count conf))]
-        (draw-fn opts text conf))))
+        (choose-opt opts text conf))))
         
 
 (defn change-neighbor-setup [conf]
-  (if (= (:neighbors conf) :4) (set-vals conf [:neighbors :8])
-      (set-vals conf [:neighbors :4])))
+  (if (= (:neighbors conf) :4)
+    (assoc-in conf [:neighbors] :8)
+    (assoc-in conf [:neighbors] :4)))
 
 (defn finish-setup [conf]
-  (set-vals conf [:setup-finished true]))
+  (assoc-in conf [:setup-finished] true))
 
-(defn setup-config [draw-fn conf]
-  (draw-fn  {\p {:action #(choose-amount-of-players draw-fn %)
+(defn setup-config [choose-opt conf]
+  (choose-opt  {\p {:action #(choose-amount-of-players choose-opt %)
                  :desc "choose amount of players (1 - 4)"}
-             \a {:action #(choose-ai-count draw-fn %)
+             \a {:action #(choose-ai-count choose-opt %)
                  :desc (str "choose amount of AIs (0 - " (max-ai-count conf) ")")}
              \s {:action change-neighbor-setup
                  :desc "switch between 4 and 8 neighbors"}
@@ -150,19 +151,19 @@
                    (:players conf)
                    (:ais conf)))
 
-(defn new-game [draw-fn state]
-  (let [init-conf (set-vals (:game-conf state) [:setup-finished false])
-        conf (loop [conf init-conf]
+(defn new-game [choose-opt state]
+  (let [ns (assoc-in state [:game-conf :setup-finished] false)
+        conf (loop [conf (:game-conf ns)]
                (if (:setup-finished conf) conf
-                   (recur (setup-config draw-fn conf))))]
-    (set-vals state
-              [:game (create-new-game conf)]
-              [:game-conf conf])))
+                   (recur (setup-config choose-opt conf))))]
+    (m-assoc-in state
+                [[:game] (create-new-game conf)]
+                [[:game-conf] conf])))
 
-(defn show-winner [draw-fn state]
-  (draw-fn {\r {:action #(set-vals % [:game (create-new-game (:game-conf %))])
+(defn show-winner [choose-opt state]
+  (choose-opt {\r {:action #(assoc-in % [:game] (create-new-game (:game-conf %)))
                 :desc "start new game"}
-            \n {:action #(new-game draw-fn %)
+            \n {:action #(new-game choose-opt %)
                 :desc "configure a new game"}
             \q {:action quit
                 :desc "quit"}}
@@ -176,8 +177,8 @@
     (assoc opts \c {:action no-op
                     :desc "close"})))
 
-(defn show-debug [draw-fn state]
-  (draw-fn (with-close-option)
+(defn show-debug [choose-opt state]
+  (choose-opt (with-close-option)
            ["debug window"
             ""
             (str "currently winning: " (p/get-leader (:game state)))
@@ -191,16 +192,16 @@
             "" \c]
            state))
 
-(defn show-help [draw-fn options]
-  (draw-fn (with-close-option options)
+(defn show-help [choose-opt options]
+  (choose-opt (with-close-option options)
            ["controls" ""
             \q \n "" \s \d \f \j \k \l "" \c]))
 
-(defn options-with-help [draw-fn options]
+(defn options-with-help [choose-opt options]
   (let [no-op-options (into {} (map (fn [[k v]]
                                       [k (assoc v :action no-op)])
                                     options))]
-    (assoc options \h {:action #(do (show-help draw-fn
+    (assoc options \h {:action #(do (show-help choose-opt
                                                no-op-options) %)
                        :desc "hidden"})))
 
@@ -208,17 +209,17 @@
   "lets the current player make his move with the given color
   and lets every AI that has to move after him move"
   [state col]
-  (update-vals state
-               [:game g/player-move col]
-               [:game p/move-ais]))
+  (m-update-in state
+               [[:game] g/player-move col]
+               [[:game] p/move-ais]))
 
-(defn user-move [draw-fn s]
+(defn user-move [choose-opt s]
   (if (g/finished? (:game s))
-    (show-winner draw-fn s)
-    (draw-fn (options-with-help draw-fn
+    (show-winner choose-opt s)
+    (choose-opt (options-with-help choose-opt
                                 {\q {:action quit
                                      :desc "quits the game"}
-                                 \n {:action #(new-game draw-fn %)
+                                 \n {:action #(new-game choose-opt %)
                                      :desc "start a new game"}
                                  \s {:action #(p-move % :red)
                                      :desc "colorize your blob in red"}
@@ -234,7 +235,7 @@
                                      :desc "colorize your blob in yellow"}
                                  \c {:action #(p-move % (solver/greedy-select-col (:game %)))
                                      :desc "hidden"}
-                                 \i {:action #(show-debug draw-fn %)
+                                 \i {:action #(show-debug choose-opt %)
                                      :desc "hidden"}})
              nil s)))
 
@@ -254,10 +255,10 @@
 
 (defn run [screen]
   (loop [s (init-state screen)]
-    (let [draw-fn (fn [& args] (apply draw-and-action screen
+    (let [choose-opt (fn [& args] (apply draw-and-action screen
                                       #(put-main-window screen (:game s)) args))]
       (if (:quit s) s
-          (recur (user-move draw-fn s)))))
+          (recur (user-move choose-opt s)))))
   screen)
 
 (defn- init-screen [args]

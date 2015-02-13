@@ -48,7 +48,7 @@
   "returns the neighbor clusters of the cluster"
   [world node]
   (set (map #(cluster world %)
-            (get (:neighbors world) (cluster world node)))))
+            (get-in world [:neighbors (cluster world node)]))))
 
 (defn- merge-clusters-h
   "returns a new world where c1 and c2 are merged"
@@ -56,14 +56,14 @@
   (let [c1 (cluster w n1), c2 (cluster w n2)]
     (if (= c1 c2) w
         (let [[cs cb] (sort-by #(size w %) [c1 c2])]
-          (update-vals w [:neighbors assoc cb (set/union (disj (neighbors w cs) cb)
+          (m-update-in w [[:neighbors] assoc cb (set/union (disj (neighbors w cs) cb)
                                                          (disj (neighbors w cb) cs))]
-                       [:sizes assoc cb (+ (size w cs) (size w cb))]
-                       [:parents assoc cs cb]
-                       [:neighbors dissoc cs]
-                       [:sizes dissoc cs]
-                       [:colors dissoc cs]
-                       [:clusters disj cs])))))
+                       [[:sizes] assoc cb (+ (size w cs) (size w cb))]
+                       [[:parents] assoc cs cb]
+                       [[:neighbors] dissoc cs]
+                       [[:sizes] dissoc cs]
+                       [[:colors] dissoc cs]
+                       [[:clusters] disj cs])))))
 
 (defn merge-clusters
   "merges any number of clusters"
@@ -86,11 +86,11 @@
 
 (defn- add-node ; TODO make private 
   [w node node-ns node-col]
-  (update-vals w [:clusters conj node]
-               [:parents assoc node node]
-               [:neighbors assoc node node-ns]
-               [:colors assoc node node-col]
-               [:sizes assoc node 1]))
+  (m-assoc-in (update-in w [:clusters] conj node)
+            [[:parents node] node]
+            [[:neighbors node] node-ns]
+            [[:colors node] node-col]
+            [[:sizes node] 1]))
 
 (defn- gen-neighbors 
   [w h i neighborhood-fn]
@@ -119,9 +119,9 @@
         n-fn (case neighbor-type
                :4 neighbors-4
                :8 neighbors-8)
-        init-world (set-vals empty-world
-                             [:w width]
-                             [:h height])
+        init-world (m-assoc-in empty-world
+                               [[:w] width]
+                               [[:h] height])
         add (fn [world node]
               (add-node world node
                         (gen-neighbors width height node n-fn)

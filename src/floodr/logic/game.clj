@@ -24,11 +24,11 @@
 (defn add-player
   "adds a player to the given world. up to 4 players supported"
   [game player-info]
-  (let [player-id (player-count game)
-        player-cluster (gen-player-node (:world game) player-id)]
-    (update-vals game
-                 [:player-info assoc player-id player-info]
-                 [:player-clusters assoc player-id player-cluster])))
+  (let [player-id (player-count game)]
+    (m-assoc-in game
+                [[:player-info player-id] player-info]
+                [[:player-clusters player-id] (gen-player-node (:world game)
+                                                               player-id)])))
 
 (defn player-cluster
   "return the cluster owned by the given player"
@@ -44,19 +44,19 @@
   (let [ps (apply clusters (:world g) (vals (:player-clusters g)))]
     (contains? ps (cluster (:world g) c))))
 
+(defn clusters-to-merge [g clust col]
+  (filter #(and (not (player-owned? g %))
+                (has-color? (:world g) % col))
+          (neighbors (:world g) clust)))
+
 (defn player-move
   "lets the current player colorize his cluster in the given color"
   [g color]
-  (let [player-cluster (current-player-cluster g)
-        clusters-to-merge (filter #(and (not (player-owned? g %))
-                                       (has-color? (:world g) % color))
-                                 (neighbors (:world g) player-cluster))
-        nw (update-vals (apply merge-clusters (:world g) player-cluster clusters-to-merge)
-                        [:colors assoc player-cluster color])]
-    (update-vals g [:world #(update-vals (apply merge-clusters % player-cluster clusters-to-merge)
-                                         [:colors assoc player-cluster color])]
-                 [:generation inc]
-                 [:current-player #(mod (inc %) (player-count g))])))
+  (let [player-cluster (current-player-cluster g)]
+    (m-update-in g [[:world :colors] assoc player-cluster color]
+                 [[:world] #(apply merge-clusters % player-cluster (clusters-to-merge g player-cluster color))]
+                 [[:generation] inc]
+                 [[:current-player] #(mod (inc %) (player-count g))])))
 
 (defn- player-h [f g]
   (key (apply f #(size (:world g) (val %)) (:player-clusters g))))
@@ -65,7 +65,7 @@
 (defn best-player [g] (player-h max-key g))
 
 (defn set-start-player [g]
-  (set-vals g [:current-player (worst-player g)]))
+  (assoc-in g [:current-player] (worst-player g)))
 
 (defn clusters-left [game]
   (- (count (:clusters (:world game))) (player-count game)))

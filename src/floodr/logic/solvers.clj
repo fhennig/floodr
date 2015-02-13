@@ -11,9 +11,8 @@
   "amout of nodes with color adjacent to the cluster of the current player
   and not already owned by a player"
   [g col]
-  (apply l/size (:world g) (filter #(and (l/has-color? (:world g) % col)
-                                         (not (g/player-owned? g %)))
-                                   (l/neighbors (:world g) (g/current-player-cluster g)))))
+  (apply l/size (:world g)
+         (g/clusters-to-merge g (g/current-player-cluster g) col)))
 
 (defn- can-move? [g]
   (> (count (filter #(not (g/player-owned? g %))

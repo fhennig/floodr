@@ -23,11 +23,10 @@
                  (dec player-count) (dec ai-count))))))
 
 (defn get-leader [g]
-  (get (get (:player-info g) (g/best-player g)) :name))
+  (get-in g [:player-info (g/best-player g) :name]))
 
 (defn move-ais
   [game]
-  (let [c-player (get (:player-info game) (:current-player game))]
-    (cond (= (:type c-player) :human) game
-          (g/finished? game) game
-          :else (recur (ai/greedy-move game)))))
+  (cond (= (get-in game [:player-info (:current-player game) :type] :human)) game
+        (g/finished? game) game
+        :else (recur (ai/greedy-move game)))))
