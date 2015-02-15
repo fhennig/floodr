@@ -75,7 +75,7 @@
             \q {:action quit
                 :desc "quit"}}
            ["game over" ""
-            (str (p/get-leader (:game state)) " won!") ""
+            (str (p/leader (:game state)) " won!") ""
             \r \n \q]
            state))
 
@@ -88,7 +88,7 @@
   (choose-opt (with-close-option)
               ["debug window"
                ""
-               (str "currently winning: " (p/get-leader (:game state)))
+               (str "currently winning: " (p/leader (:game state)))
                ""
                (str "r: " (solver/potential-gain (:game state) :red))
                (str "g: " (solver/potential-gain (:game state) :green))
@@ -147,6 +147,11 @@
                                    ["controls" "" \q \n "" \s \n \f \j \k \l])
              nil s)))
 
+(defn stats [game]
+  (if (= (g/player-count game) 1)
+    [(str "generation: " (:generation game))]
+    [(str "currently winning: " (p/leader game))]))
+
 ;;; drawing
 
 (defn world->blocks
@@ -159,8 +164,7 @@
   
 (defn put-main-window [screen game]
   (o/all-black screen)
-  (o/put-stats screen [(str "generation: " (:generation game))
-                       (str "blobs left: " (g/clusters-left game))])
+  (o/put-stats screen (stats game))
   (o/put-title screen)
   (o/put-blocks screen (world->blocks (:world game))))
 

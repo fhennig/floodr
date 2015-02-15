@@ -22,8 +22,8 @@
           (recur (g/join game (new-player (str "Computer (" p-nr ")") :ai))
                  (dec player-count) (dec ai-count))))))
 
-(defn get-leader [g]
-  (get-in g [:slot-occupancy (apply min-key #(floodr.logic.world/size (:world g) %) (g/occupied-slots g)) :name]))
+(defn leader [g]
+  (get-in g [:slot-occupancy (apply max-key #(floodr.logic.world/size (:world g) %) (g/occupied-slots g)) :name]))
 
 (defn move-ais
   [game]
