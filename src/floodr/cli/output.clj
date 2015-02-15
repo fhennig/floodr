@@ -1,6 +1,31 @@
-(ns floodr.lanterna-window
+(ns floodr.cli.output
   (:require [lanterna.screen :as s]
             [floodr.util :refer :all]))
+
+;;; initializing and destructing
+
+(defn init-screen [type]
+  (let [scr (s/get-screen type)]
+    (s/start scr)
+    (s/get-key scr) ; HACK to fix size
+    (s/redraw scr)
+    scr))
+
+(defn desctruct-screen [screen]
+  (s/stop screen))
+
+;;; direct rebinds only to encapsulate
+
+(def get-size s/get-size)
+(def redraw s/redraw)
+
+;;; clearing the screen
+
+(defn all-black [screen]
+  (let [[w h] (s/get-size screen)]
+    (doseq [y (range h)]
+      (doseq [x (range w)]
+        (s/put-string screen x y " ")))))
 
 ;;; padding 
 
@@ -15,14 +40,6 @@
 (defn- pad-lines [lines]
   (let [line-width (apply max (map count lines))]
     (map #(pad % line-width false) lines)))
-
-;;; clearing the screen
-
-(defn all-black [screen]
-  (let [[w h] (s/get-size screen)]
-    (doseq [y (range h)]
-      (doseq [x (range w)]
-        (s/put-string screen x y " ")))))
 
 ;;; drawing windows
 
@@ -57,24 +74,39 @@
           width (count (first ls-padded))]
       (put-lines screen width ls-padded))))
 
-;;; drawing the status line (currently unused)
+;;; drawing the top status line
 
-(defn put-status
-  [screen status]
-  (let [[w h] (s/get-size screen)
-        y (- h 1)]
-    (if (empty? status)
-      (s/put-string screen 0 y (space (- w 1)))
-      (s/put-string screen 2 y status))))
+(defn put-stats
+  "prints the given strings to the top right of the window, separated by ' - '"
+  [screen stats]
+  (let [statsstr (reduce #(str %1 " - " %2) stats)
+        [w _] (s/get-size screen)
+        startpos (- w (count statsstr) 2)]
+    (s/put-string screen startpos 0 statsstr)))
 
-(defn clear-status [screen] (put-status screen nil))
+;;; drawing the game world
 
-;;; getting user input
+(defn- game-coords->screen-coords [x y]
+  [(+ 2 (* 2 x)) (+ 2 y)])
 
-(defn get-valid
-  "gets key input from the user. retries until a key is
-  given that is contained in the given set of valid keys"
-  [screen valid-keys]
-  (let [key (s/get-key-blocking screen)]
-    (if (contains? valid-keys key) key
-        (recur screen valid-keys))))
+(defn- put-block [screen x y col]
+  (let [[sx sy] (game-coords->screen-coords x y)]
+    (s/put-string screen sx sy "  " {:bg col})))
+
+(defn put-blocks
+  "draws a sequence of blocks to the screen, a block is [x y :color],
+  where x and y are game coordinates"
+  [screen blocks]
+  (doseq [b blocks]
+    (apply put-block screen b)))
+
+;;; drawing the title
+
+(defn put-title [screen]
+  (s/put-string screen 2 0 "f" {:fg :red})
+  (s/put-string screen 3 0 "l" {:fg :green})
+  (s/put-string screen 4 0 "o" {:fg :blue})
+  (s/put-string screen 5 0 "o" {:fg :cyan})
+  (s/put-string screen 6 0 "d" {:fg :magenta})
+  (s/put-string screen 7 0 "r" {:fg :yellow})
+  (s/put-string screen 8 0 " - '?' for help"))

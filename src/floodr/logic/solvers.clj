@@ -12,11 +12,11 @@
   and not already owned by a player"
   [g col]
   (apply l/size (:world g)
-         (g/clusters-to-merge g (g/current-player-cluster g) col)))
+         (g/clusters-to-merge g (g/active-slot-cluster g) col)))
 
 (defn- can-move? [g]
   (> (count (filter #(not (g/player-owned? g %))
-                    (l/neighbors (:world g) (g/current-player-cluster g))))
+                    (l/neighbors (:world g) (g/active-slot-cluster g))))
      0))
 
 (defn greedy-select-col [g]

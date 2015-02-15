@@ -20,3 +20,6 @@
   (is (in-bounds? w 3 [7 0]))
   (is (in-bounds? w 3 [7 2]))
   (is (in-bounds? w 3 [5 1])))
+
+(deftest test-drop-up-to
+  (is (= '(3 4 5) (drop-up-to 3 '(1 2 3 4 5)))))

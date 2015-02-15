@@ -22,9 +22,9 @@
 (def test-game1
   {:world test-world1
    :generation 1
-   :player-info {0 "Player 1", 1 "Player 2"}
-   :player-clusters {0 0, 1 8}
-   :current-player 0})
+   :available-slots [0 8 2 6]
+   :slot-occupancy {0 "Player 1", 8 "Player 2"}
+   :active-slot 0})
 
 (def test-game2
   {:world {:w 2 :h 2
@@ -34,6 +34,13 @@
            :colors {0 :red}
            :sizes {0 4}}
    :generation 3
-   :player-info {0 "Player 1", 1 "Player 2"}
-   :player-clusters {0 0, 1 3}
-   :current-player 0})
+   :available-slots [0 1 2 3]
+   :slot-occupancy {0 "Player 1", 3 "Player 2"}
+   :active-slot 0})
+
+(def empty-game
+  {:world test-world1
+   :generation 0
+   :available-slots [0 8 2 6]
+   :slot-occupancy {}
+   :active-slot nil})

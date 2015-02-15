@@ -11,6 +11,22 @@
 (def m-update-in #(apply change-state update-in %&))
 (def m-assoc-in #(apply change-state assoc-in %&))
 
+(defn dissoc-in
+  [m [k & ks :as keys]]
+  (if ks
+    (if-let [nextmap (get m k)]
+      (let [newmap (dissoc-in nextmap ks)]
+        (assoc m k newmap))
+      m)
+    (dissoc m k)))
+
+;;; operations on sequences
+
+(defn drop-up-to [val seq] ; TODO move to util
+  (if (empty? seq) seq
+      (if (= (first seq) val) seq
+          (recur val (rest seq)))))
+
 ;;; working with grid-graphs
 
 (defn index->coords

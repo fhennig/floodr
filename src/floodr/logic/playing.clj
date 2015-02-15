@@ -12,21 +12,21 @@
 (defn setup-players
   "adds the given amount of players to the game and sets the start player"
   [game player-count ai-count]
-  (if (= player-count 0) (g/set-start-player game)
+  (if (= player-count 0) (g/set-start-slot game)
       (let [human-count (- player-count ai-count)
             p-nr (inc (g/player-count game))]
         (if (> human-count 0)
-          (recur (g/add-player game (new-player (str "Human (" p-nr ")")
-                                                :human))
+          (recur (g/join game (new-player (str "Human (" p-nr ")")
+                                                             :human))
                  (dec player-count) ai-count)
-          (recur (g/add-player game (new-player (str "Computer (" p-nr ")") :ai))
+          (recur (g/join game (new-player (str "Computer (" p-nr ")") :ai))
                  (dec player-count) (dec ai-count))))))
 
 (defn get-leader [g]
-  (get-in g [:player-info (g/best-player g) :name]))
+  (get-in g [:slot-occupancy (apply min-key #(floodr.logic.world/size (:world g) %) (g/occupied-slots g)) :name]))
 
 (defn move-ais
   [game]
-  (cond (= (get-in game [:player-info (:current-player game) :type] :human)) game
+  (cond (= (get-in game [:slot-occupancy (:active-slot game) :type]) :human) game
         (g/finished? game) game
-        :else (recur (ai/greedy-move game)))))
+        :else (recur (ai/greedy-move game))))

@@ -2,47 +2,47 @@
   (:require [floodr.logic.world :refer :all]
             [floodr.util :refer :all]))
 
-(defn new-game [w]
-  {:world w
-   :generation 0
-   :player-info {}
-   :player-clusters {}
-   :current-player nil})
-
 (defn player-count [g]
-  (count (:player-info g)))
+  (count (:slot-occupancy g)))
 
-(defn- gen-player-node [world player]
-  (coords->index (:w world)
-                 (case player
-                   0 [0 0] ; top left
-                   1 [(- (:w world) 1) (- (:h world) 1)] ; bot right
-                   2 [(- (:w world) 1) 0] ; top right
-                   3 [0 (- (:h world) 1)] ; bot left
-                   nil)))
+(defn clusters-left [game]
+  (- (count (:clusters (:world game))) (player-count game)))
 
-(defn add-player
-  "adds a player to the given world. up to 4 players supported"
-  [game player-info]
-  (let [player-id (player-count game)]
-    (m-assoc-in game
-                [[:player-info player-id] player-info]
-                [[:player-clusters player-id] (gen-player-node (:world game)
-                                                               player-id)])))
+(defn finished? [game]
+  (= 0 (clusters-left game)))
 
-(defn player-cluster
-  "return the cluster owned by the given player"
-  [g p]
-  (cluster (:world g) (get (:player-clusters g) p)))
+(defn occupied? [g slot]
+  (contains? (:slot-occupancy g) slot))
 
-(defn current-player-cluster
-  "return the cluster of the current player"
-  [g]
-  (player-cluster g (:current-player g)))
+(defn occupied-slots [g]
+  (filter #(occupied? g %) (:available-slots g)))
+            
+(defn next-free-slot [g]
+  (first (filter #(not (occupied? g %))
+                 (:available-slots g))))
+
+(defn active-slot-cluster [g]
+  (cluster (:world g) (:active-slot g)))
 
 (defn player-owned? [g c]
-  (let [ps (apply clusters (:world g) (vals (:player-clusters g)))]
+  (let [ps (apply clusters (:world g) (keys (:slot-occupancy g)))]
     (contains? ps (cluster (:world g) c))))
+
+(defn next-active-slot [g]
+  (first (filter #(occupied? g %)
+                 (rest (drop-up-to (:active-slot g)
+                                   (cycle (:available-slots g)))))))
+
+(defn join 
+  "lets a player join the game, optionally at a specified slot"
+  [game player & [slot]]
+   (assoc-in game [:slot-occupancy (if slot slot (next-free-slot game))] player))
+
+(defn leave [game slot]
+  (let [g (dissoc-in game [:slot-occupancy slot])]
+    (if (= slot (:active-slot game))
+      (assoc g :active-slot (next-active-slot))
+      g)))
 
 (defn clusters-to-merge [g clust col]
   (filter #(and (not (player-owned? g %))
@@ -52,24 +52,30 @@
 (defn player-move
   "lets the current player colorize his cluster in the given color"
   [g color]
-  (let [player-cluster (current-player-cluster g)]
-    (m-update-in g [[:world :colors] assoc player-cluster color]
-                 [[:world] #(apply merge-clusters % player-cluster (clusters-to-merge g player-cluster color))]
-                 [[:generation] inc]
-                 [[:current-player] #(mod (inc %) (player-count g))])))
+  (let [player-cluster (active-slot-cluster g)
+        g2 (m-assoc-in g [[:world :colors player-cluster] color]
+                         [[:active-slot] (next-active-slot g)])]
+    (m-update-in g2 [[:world] #(apply merge-clusters % player-cluster
+                                      (clusters-to-merge g player-cluster color))]
+                    [[:generation] inc])))
 
-(defn- player-h [f g]
-  (key (apply f #(size (:world g) (val %)) (:player-clusters g))))
+;;; game generation
 
-(defn worst-player [g] (player-h min-key g))
-(defn best-player [g] (player-h max-key g))
+(defn- possible-slots [world]
+  (map #(coords->index (:w world) %)
+       [[0 0] ;top left
+        [(- (:w world) 1) (- (:h world) 1)] ; bot right
+        [(- (:w world) 1) 0] ; top right
+        [0 (- (:h world) 1)]])) ; bot left
 
-(defn set-start-player [g]
-  (assoc-in g [:current-player] (worst-player g)))
+(defn new-game [w]
+  (let [slots (possible-slots w)]
+    {:world w ; should not be changed
+     :generation 0
+     :available-slots slots ; should not be changed
+     :slot-occupancy {}
+     :active-slot nil}))
 
-(defn clusters-left [game]
-  (- (count (:clusters (:world game))) (player-count game)))
-
-(defn finished? [game]
-  (= 0 (clusters-left game)))
-
+(defn set-start-slot [g]
+  (let [s (apply min-key #(size (:world g) %) (occupied-slots g))]
+    (assoc-in g [:active-slot] s)))
