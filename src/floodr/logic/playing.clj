@@ -5,8 +5,9 @@
 (defn new-player
   "creates a new player.
   name should be a string, type is either :human or :ai"
-  [name type]
-  {:name name
+  [id name type]
+  {:id id
+   :name name
    :type type})
 
 (defn setup-players
@@ -16,10 +17,9 @@
       (let [human-count (- player-count ai-count)
             p-nr (inc (g/player-count game))]
         (if (> human-count 0)
-          (recur (g/join game (new-player (str "Human (" p-nr ")")
-                                                             :human))
+          (recur (g/join game (new-player p-nr (str "Human") :human))
                  (dec player-count) ai-count)
-          (recur (g/join game (new-player (str "Computer (" p-nr ")") :ai))
+          (recur (g/join game (new-player p-nr (str "Computer") :ai))
                  (dec player-count) (dec ai-count))))))
 
 (defn leader [g]

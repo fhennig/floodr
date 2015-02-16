@@ -5,6 +5,6 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [clojure-lanterna "0.9.4"]]
-  :main ^:skip-aot floodr.core
+  :main ^:skip-aot floodr.cli.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})

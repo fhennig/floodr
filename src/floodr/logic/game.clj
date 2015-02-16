@@ -24,6 +24,15 @@
 (defn active-slot-cluster [g]
   (cluster (:world g) (:active-slot g)))
 
+(defn non-active-slots [g]
+  (remove #(= (:active-slot g) %)
+          (occupied-slots g)))
+
+(defn owner [g n]
+  (let [c (cluster (:world g) n)]
+    (get (:slot-occupancy g) (first (filter #(= c (cluster (:world g) %))
+                                            (keys (:slot-occupancy g)))))))
+
 (defn player-owned? [g c]
   (let [ps (apply clusters (:world g) (keys (:slot-occupancy g)))]
     (contains? ps (cluster (:world g) c))))

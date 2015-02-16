@@ -89,9 +89,12 @@
 (defn- game-coords->screen-coords [x y]
   [(+ 2 (* 2 x)) (+ 2 y)])
 
-(defn- put-block [screen x y col]
+(defn- block-str [text]
+  (apply str (take 2 (str text "  "))))
+
+(defn- put-block [screen x y col & [text]]
   (let [[sx sy] (game-coords->screen-coords x y)]
-    (s/put-string screen sx sy "  " {:bg col})))
+    (s/put-string screen sx sy (block-str text) {:bg col})))
 
 (defn put-blocks
   "draws a sequence of blocks to the screen, a block is [x y :color],

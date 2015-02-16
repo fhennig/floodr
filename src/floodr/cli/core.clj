@@ -1,4 +1,4 @@
-(ns floodr.core
+(ns floodr.cli.core
   (:require [floodr.cli.output :as o]
             [floodr.cli.input :as i]
             [floodr.util :refer :all]
@@ -116,14 +116,13 @@
   "lets the current player make his move with the given color
   and lets every AI that has to move after him move"
   [state col]
-  (m-update-in state
-               [[:game] g/player-move col]
-               [[:game] p/move-ais]))
+  (m-update-in state [[:game] g/player-move col]))
 
 (defn user-move [choose-opt s]
-  (if (g/finished? (:game s))
-    (show-winner choose-opt s)
-    (choose-opt (options-with-help choose-opt
+  (cond (g/finished? (:game s)) (show-winner choose-opt s)
+        (= :ai (get-in s [:game :slot-occupancy (:active-slot (:game s)) :type])) (do ;(Thread/sleep 10)
+                                                                                      (update-in s [:game] solver/greedy-move))
+        :else (choose-opt (options-with-help choose-opt
                                    {\q {:action quit
                                         :desc "quits the game"}
                                     \n {:action #(new-game choose-opt %)
@@ -150,23 +149,41 @@
 (defn stats [game]
   (if (= (g/player-count game) 1)
     [(str "generation: " (:generation game))]
-    [(str "currently winning: " (p/leader game))]))
+    [(str "next move: " (get-in game [:slot-occupancy (:active-slot game) :name]))
+     (str "currently winning: " (p/leader game))]))
 
 ;;; drawing
 
+(defn occupied-slots-with-same-color-as-active-slot [game]
+  (let [apc (l/color (:world game) (:active-slot game))]
+    (filter #(= apc (l/color (:world game) %))
+            (g/non-active-slots game))))
+
+(defn belongs-to [game node slot]
+  (= (l/cluster (:world game) node)
+     (l/cluster (:world game) slot)))
+
+(defn block-at [game x y dot]
+  (let [i (coords->index (get-in game [:world :w]) [x y])]
+    [x y
+     (l/color (:world game) i)
+     (when (and dot (belongs-to game i (:active-slot game))) ".")]))
+
 (defn world->blocks
   "extracts blocks in the form of [x y :color] from the world"
-  [world]
-  (let [[w h] [(:w world) (:h world)]]
+  [game]
+  (let [[w h] [(:w (:world game)) (:h (:world game))]
+        dot (not (empty? (clojure.set/intersection (l/clusters (:world game) (occupied-slots-with-same-color-as-active-slot game))
+                                                   (l/neighbors (:world game) (:active-slot game)))))]
     (apply concat (for [y (range 0 h)]
                     (for [x (range 0 w)]
-                      [x y (l/color world (coords->index w [x y]))])))))
+                      (block-at game x y dot))))))
   
 (defn put-main-window [screen game]
   (o/all-black screen)
   (o/put-stats screen (stats game))
   (o/put-title screen)
-  (o/put-blocks screen (world->blocks (:world game))))
+  (o/put-blocks screen (world->blocks game)))
 
 (defn valid-keys [options]
   (set (keys options)))
@@ -207,6 +224,8 @@
 
 (defn run [screen]
   (loop [s (init-state screen)]
+    (put-main-window screen (:game s))
+    (o/redraw screen)
     (let [choose-opt (fn [& args] (apply draw-and-action screen
                                       #(put-main-window screen (:game s)) args))]
       (if (:quit s) s
