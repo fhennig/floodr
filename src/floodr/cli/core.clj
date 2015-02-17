@@ -128,22 +128,24 @@
                                     \n {:action #(new-game choose-opt %)
                                         :desc "start a new game"}
                                     \s {:action #(p-move % :red)
-                                        :desc "colorize your blob in red"}
+                                        :desc "colorize your block in red"}
                                     \d {:action #(p-move % :green)
-                                        :desc "colorize your blob in green"}
+                                        :desc "colorize your block in green"}
                                     \f {:action #(p-move % :blue)
-                                        :desc "colorize your blob in blue"}
+                                        :desc "colorize your block in blue"}
                                     \j {:action #(p-move % :cyan)
-                                        :desc "colorize your blob in cyan"}
+                                        :desc "colorize your block in cyan"}
                                     \k {:action #(p-move % :magenta)
-                                        :desc "colorize your blob in magenta"}
+                                        :desc "colorize your block in magenta"}
                                     \l {:action #(p-move % :yellow)
-                                        :desc "colorize your blob in yellow"}
+                                        :desc "colorize your block in yellow"}
                                     \c {:action #(p-move % (solver/greedy-select-col (:game %)))
                                         :desc "hidden"}
                                     \i {:action #(show-debug choose-opt %)
                                         :desc "hidden"}}
-                                   ["controls" "" \q \n "" \s \n \f \j \k \l])
+                                   ["controls" "" \q \n "" \s \d \f \j \k \l ""
+                                    "you can use the 'floodr' text at the top as an orientation,"
+                                    "it is colored in the same order as the keys are on the keyboard."])
              nil s)))
 
 (defn format-player
