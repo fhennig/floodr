@@ -11,7 +11,8 @@ it's out there for anyone who is interested!
 
 ## Installation
 
-Download the standalone jar from http://example.com/FIXME.
+Download the standalone jar from the
+[releases page](https://github.com/greenkeeper/floodr/releases/tag/v0.2). 
 
 Or clone the repo and use [leiningen](http://leiningen.org/) to run it.
 
