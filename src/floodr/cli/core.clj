@@ -3,7 +3,7 @@
             [floodr.cli.input :as i]
             [floodr.util :refer :all]
             [floodr.logic.configuration :as c]
-            [floodr.logic.world :as l]
+            [floodr.logic.world :as w]
             [floodr.logic.game :as g]
             [floodr.logic.playing :as p]
             [floodr.logic.solvers :as solver])
@@ -154,27 +154,20 @@
 
 ;;; drawing
 
-(defn occupied-slots-with-same-color-as-active-slot [game]
-  (let [apc (l/color (:world game) (:active-slot game))]
-    (filter #(= apc (l/color (:world game) %))
-            (g/non-active-slots game))))
-
-(defn belongs-to [game node slot]
-  (= (l/cluster (:world game) node)
-     (l/cluster (:world game) slot)))
-
-(defn block-at [game x y dot]
-  (let [i (coords->index (get-in game [:world :w]) [x y])]
-    [x y
-     (l/color (:world game) i)
-     (when (and dot (belongs-to game i (:active-slot game))) ".")]))
+(defn block-at [{:keys [world active-slot] :as g} x y dot]
+  (let [i (coords->index (:w world) [x y])]
+    [x y (w/color world i)
+     (when (and dot (w/same-cluster? world i active-slot)) ".")]))
 
 (defn world->blocks
   "extracts blocks in the form of [x y :color] from the world"
-  [game]
-  (let [[w h] [(:w (:world game)) (:h (:world game))]
-        dot (not (empty? (clojure.set/intersection (l/clusters (:world game) (occupied-slots-with-same-color-as-active-slot game))
-                                                   (l/neighbors (:world game) (:active-slot game)))))]
+  [{:keys [world active-slot] :as game}]
+  (let [[w h] [(:w world) (:h world)]
+        players-with-same-color (filter #(= (w/color world active-slot)
+                                            (w/color world %))
+                                        (g/non-active-slots game))
+        dot (not (empty? (clojure.set/intersection (apply w/clusters world players-with-same-color)
+                                                   (w/neighbors world active-slot))))]
     (apply concat (for [y (range 0 h)]
                     (for [x (range 0 w)]
                       (block-at game x y dot))))))

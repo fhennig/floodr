@@ -19,6 +19,9 @@
   [w & nodes]
     (set (map #(cluster w %) nodes)))
 
+(defn same-cluster? [w n1 n2]
+  (= (cluster w n1) (cluster w n2)))
+
 (defn- path
   "mainly used for debugging, returns the path that the node takes
   to determine its cluster"
