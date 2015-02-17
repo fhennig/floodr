@@ -23,7 +23,7 @@
                  (dec player-count) (dec ai-count))))))
 
 (defn leader [g]
-  (get-in g [:slot-occupancy (apply max-key #(floodr.logic.world/size (:world g) %) (g/occupied-slots g)) :name]))
+  (get-in g [:slot-occupancy (apply max-key #(floodr.logic.world/size (:world g) %) (g/occupied-slots g))]))
 
 (defn move-ais
   [game]

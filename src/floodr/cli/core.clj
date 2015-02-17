@@ -146,21 +146,30 @@
                                    ["controls" "" \q \n "" \s \n \f \j \k \l])
              nil s)))
 
-(defn stats [game]
+(defn format-player
+  "formats a player into a string"
+  [{:keys [name id]}]
+  (str name " (" id ")"))
+
+(defn stats
+  "returns a vector of strings with information about the game"
+  [{:keys [generation slot-occupancy active-slot] :as game}]
   (if (= (g/player-count game) 1)
-    [(str "generation: " (:generation game))]
-    [(str "next move: " (get-in game [:slot-occupancy (:active-slot game) :name]))
-     (str "currently winning: " (p/leader game))]))
+    [(str "generation: " generation)]
+    [(str "next move: " (format-player (slot-occupancy active-slot)))
+     (str "currently winning: " (format-player (p/leader game)))]))
 
 ;;; drawing
 
-(defn block-at [{:keys [world active-slot] :as g} x y dot]
+(defn block-at
+  "returns a vector representing the block at the given coordinates"
+  [{:keys [world active-slot]} x y dot]
   (let [i (coords->index (:w world) [x y])]
     [x y (w/color world i)
      (when (and dot (w/same-cluster? world i active-slot)) ".")]))
 
 (defn world->blocks
-  "extracts blocks in the form of [x y :color] from the world"
+  "extracts blocks in the form of [x y :color text] from the world"
   [{:keys [world active-slot] :as game}]
   (let [[w h] [(:w world) (:h world)]
         players-with-same-color (filter #(= (w/color world active-slot)
