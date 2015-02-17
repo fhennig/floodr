@@ -1,8 +1,6 @@
 # floodr
 
-<p align="center">
-  <img src="floodr_screenshot01.png" alt="screenshot"/>
-</p>
+![screenshot](floodr_screenshot01.png)
 
 floodr is a game for the unix terminal. The goal is to make your part
 of the board as large as possible. It is possible to play alone or
