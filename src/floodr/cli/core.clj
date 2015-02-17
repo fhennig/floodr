@@ -24,7 +24,7 @@
               conf))
 
 (defn build-ai-opts [max-count]
-  (let [opts (for [i (range 1 (inc max-count))
+  (let [opts (for [i (range 0 (inc max-count))
                    :let [opt [(digit->char i)
                               {:action #(assoc-in % [:ais] i)
                                :desc (str i (if (= 1 i) " AI" " AIs"))}]]] opt)
