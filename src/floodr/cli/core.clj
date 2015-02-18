@@ -67,6 +67,11 @@
 (defn quit [state]
   (assoc-in state [:quit] true))
 
+(defn format-player
+  "formats a player into a string"
+  [{:keys [name id]}]
+  (str name " (" id ")"))
+
 (defn show-winner [choose-opt state]
   (choose-opt {\r {:action #(assoc-in % [:game] (c/create-new-game (:game-conf %)))
                 :desc "start new game"}
@@ -75,7 +80,7 @@
             \q {:action quit
                 :desc "quit"}}
            ["game over" ""
-            (str (p/leader (:game state)) " won!") ""
+            (str (format-player (p/leader (:game state))) " won!") ""
             \r \n \q]
            state))
 
@@ -84,18 +89,18 @@
     (assoc opts \c {:action no-op
                     :desc "close"})))
 
-(defn show-debug [choose-opt state]
+(defn show-debug [choose-opt {:keys [game] :as state}]
   (choose-opt (with-close-option)
               ["debug window"
                ""
-               (str "currently winning: " (p/leader (:game state)))
+               (str "currently winning: " (format-player (p/leader game)))
                ""
-               (str "r: " (solver/potential-gain (:game state) :red))
-               (str "g: " (solver/potential-gain (:game state) :green))
-               (str "b: " (solver/potential-gain (:game state) :blue))
-               (str "c: " (solver/potential-gain (:game state) :cyan))
-               (str "m: " (solver/potential-gain (:game state) :magenta))
-               (str "y: " (solver/potential-gain (:game state) :yellow))
+               (str "r: " (solver/potential-gain game :red))
+               (str "g: " (solver/potential-gain game :green))
+               (str "b: " (solver/potential-gain game :blue))
+               (str "c: " (solver/potential-gain game :cyan))
+               (str "m: " (solver/potential-gain game :magenta))
+               (str "y: " (solver/potential-gain game :yellow))
                "" \c]
               state))
 
@@ -147,11 +152,6 @@
                                     "you can use the 'floodr' text at the top as an orientation,"
                                     "it is colored in the same order as the keys are on the keyboard."])
              nil s)))
-
-(defn format-player
-  "formats a player into a string"
-  [{:keys [name id]}]
-  (str name " (" id ")"))
 
 (defn stats
   "returns a vector of strings with information about the game"
