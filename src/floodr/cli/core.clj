@@ -37,8 +37,20 @@
       (let [[opts text] (build-ai-opts (c/max-ai-count conf))]
         (choose-opt opts text conf))))
 
+(defn conf-desc [conf]
+  [(str "game mode: " (case (:game-mode conf)
+                        :flood "flood"
+                        :ctf "capture the flag"))
+   (str "players:   " (:players conf))
+   (str "AIs:       " (:ais conf))
+   (str "neighbors: " (case (:neighbors conf)
+                        :4 "direct"
+                        :8 "direct and diagonal"))])
+
 (defn setup-config [choose-opt conf]
-  (choose-opt {\p {:action #(choose-amount-of-players choose-opt %)
+  (choose-opt {\m {:action c/cycle-game-mode
+                   :desc "choose game mode (flood, CTF)"}
+               \p {:action #(choose-amount-of-players choose-opt %)
                    :desc "choose amount of players (1 - 4)"}
                \a {:action #(choose-ai-count choose-opt %)
                    :desc (str "choose amount of AIs (0 - " (c/max-ai-count conf) ")")}
@@ -46,13 +58,9 @@
                    :desc "switch between 4 and 8 neighbors"}
                \n {:action c/finish-setup
                    :desc "start a new game with this configuration"}}
-              ["game configuration" "" 
-               (str "players:   " (:players conf))
-               (str "AIs:       " (:ais conf))
-               (str "neighbors: " (case (:neighbors conf)
-                                    :4 "direct"
-                                    :8 "direct and diagonal"))
-               "" \p \a \s "" \n]
+              (concat ["game configuration" ""]
+                      (conf-desc conf)
+                      ["" \m \p \a \s "" \n])
               conf))
 
 (defn new-game [choose-opt state]
@@ -167,9 +175,9 @@
 
 (defn block-at
   "returns a vector representing the block at the given coordinates"
-  [{:keys [world active-slot]} node dot]
+  [{:keys [world active-slot mode]} node dot]
   [node (w/color world node)
-   (cond (= (:flag world) node) "##"
+   (cond (and (= mode :ctf) (= (:flag world) node)) "##"
          (and dot (w/same-cluster? world node active-slot)) ".")])
 
 (defn world->blocks
@@ -223,7 +231,8 @@
         init-game-conf {:w w :h h
                         :players 2
                         :ais 1
-                        :neighbors :4}
+                        :neighbors :4
+                        :game-mode :flood}
         i-state {:game (c/create-new-game init-game-conf)
                  :game-conf init-game-conf}]
     i-state))

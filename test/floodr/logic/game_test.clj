@@ -14,9 +14,14 @@
   (is (= 4 (clusters-left t/test-game1)))
   (is (= 3 (clusters-left (player-move t/test-game1 :green)))))
 
+(defn as-ctf [game]
+  (assoc game :mode :ctf))
+
 (deftest test-finished?
   (is (not (finished? t/test-game1)))
-  (is (finished? t/test-game2)))
+  (is (finished? t/test-game2))
+  (is (not (finished? (as-ctf t/test-game1))))
+  (is (finished? (as-ctf t/test-game2))))
 
 (deftest test-occupied-slots
   (is (= 2 (count (occupied-slots t/test-game1))))
@@ -47,8 +52,9 @@
     (is (= (w/color (:world tg2) (:active-slot tg1)) move-color))))
 
 (deftest test-set-start-slot
-  (let [init-game (join (new-game t/test-init-world) "Player 1")]
+  (let [init-game (join (new-game t/test-init-world :flood) "Player 1")]
     (is (not (nil? (:active-slot (set-start-slot init-game)))))))
 
 (deftest test-new-game
-  (new-game t/test-world1))
+  (is (not (nil? (new-game t/test-world1 :flood))))
+  (is (not (nil? (new-game t/test-world1 :ctf)))))

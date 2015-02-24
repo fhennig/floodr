@@ -8,13 +8,12 @@
 (defn clusters-left [game]
   (- (count (clusters (:world game))) (player-count game)))
 
-(defn finished? [game]
-  (= 0 (clusters-left game)))
-
 (defn occupied? [g slot]
   (contains? (:slot-occupancy g) slot))
 
-(defn occupied-slots [{:keys [world] :as g}]
+(defn occupied-slots
+  "returns the occupied slots in the game, in the same order as the available slots are"
+  [{:keys [world] :as g}]
   (filter #(occupied? g %) (:available-slots world)))
             
 (defn next-free-slot [{:keys [world] :as g}]
@@ -37,10 +36,8 @@
   (let [ps (nodes->clusters (:world g) (keys (:slot-occupancy g)))]
     (contains? ps (cluster (:world g) c))))
 
-(defn next-active-slot [{:keys [world] :as g}]
-  (first (filter #(occupied? g %)
-                 (rest (drop-up-to (:active-slot g)
-                                   (cycle (:available-slots world)))))))
+(defn next-active-slot [g]
+  (next-in-cycle (:active-slot g) (occupied-slots g)))
 
 (defn join 
   "lets a player join the game, optionally at a specified slot"
@@ -70,12 +67,34 @@
 
 ;;; game generation
 
-(defn new-game [w]
+(def game-modes '(:flood :ctf))
+
+(defn new-game [w t]
   {:world w ; should not be changed
+   :mode t
    :generation 0
    :slot-occupancy {}
    :active-slot nil})
 
-(defn set-start-slot [g]
+(defn set-start-slot [g] ; TODO maybe this should be a multimethod too
   (let [s (apply min-key #(size (:world g) %) (occupied-slots g))]
     (assoc-in g [:active-slot] s)))
+
+;;; game rules
+
+(defmulti finished? :mode)
+
+(defmethod finished? :flood [game]
+  (= 0 (clusters-left game)))
+
+(defmethod finished? :ctf [game]
+  (player-owned? game (get-in game [:world :flag])))
+
+(defmulti winner :mode) ; TODO use everywhere and add tests
+
+(defmethod winner :flood [g]
+  (get-in g [:slot-occupancy
+             (apply max-key #(size (:world g) %) (occupied-slots g))]))
+
+(defmethod winner :ctf [game]
+  (owner game (get-in game [:world :flag])))

@@ -27,6 +27,9 @@
       (if (= (first seq) val) seq
           (recur val (rest seq)))))
 
+(defn next-in-cycle [current seq]
+  (second (drop-up-to current (cycle seq))))
+
 ;;; working with grid-graphs
 
 (defn index->coords

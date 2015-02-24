@@ -83,11 +83,13 @@
 (def colors '(:red :green :blue :yellow :cyan :magenta))
 
 (def empty-world
-  {:w 0 :h 0 ; used within the UI
-   :parents {} ; maps nodes to their parents; used to get the cluster of a node
-   :neighbors {} ; what neighbors does a cluster have
-   :colors {} ; what color does a cluster have
-   :sizes {}}) ; size of the clusters
+  {:w 0 :h 0            ; used within the UI
+   :parents {}          ; maps nodes to their parents; used to get the cluster of a node
+   :neighbors {}        ; what neighbors does a cluster have
+   :colors {}           ; what color does a cluster have
+   :sizes {}            ; size of the clusters
+   :available-slots '() ; nodes that can be owned by players
+   :flag nil})          ; flag for CTF
 
 ;;; rectangular world generation 
 
