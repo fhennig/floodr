@@ -47,6 +47,9 @@
 (defn floor [x]
   (int (Math/floor x)))
 
+(defn ceil [x]
+  (int (Math/ceil x)))
+
 ;;; converting chars and digits
 
 (defn char->digit

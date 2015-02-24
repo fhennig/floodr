@@ -6,7 +6,7 @@
   (count (:slot-occupancy g)))
 
 (defn clusters-left [game]
-  (- (count (:clusters (:world game))) (player-count game)))
+  (- (count (clusters (:world game))) (player-count game)))
 
 (defn finished? [game]
   (= 0 (clusters-left game)))
@@ -14,12 +14,12 @@
 (defn occupied? [g slot]
   (contains? (:slot-occupancy g) slot))
 
-(defn occupied-slots [g]
-  (filter #(occupied? g %) (:available-slots g)))
+(defn occupied-slots [{:keys [world] :as g}]
+  (filter #(occupied? g %) (:available-slots world)))
             
-(defn next-free-slot [g]
+(defn next-free-slot [{:keys [world] :as g}]
   (first (filter #(not (occupied? g %))
-                 (:available-slots g))))
+                 (:available-slots world))))
 
 (defn active-slot-cluster [g]
   (cluster (:world g) (:active-slot g)))
@@ -34,13 +34,13 @@
                                             (keys (:slot-occupancy g)))))))
 
 (defn player-owned? [g c]
-  (let [ps (apply clusters (:world g) (keys (:slot-occupancy g)))]
+  (let [ps (nodes->clusters (:world g) (keys (:slot-occupancy g)))]
     (contains? ps (cluster (:world g) c))))
 
-(defn next-active-slot [g]
+(defn next-active-slot [{:keys [world] :as g}]
   (first (filter #(occupied? g %)
                  (rest (drop-up-to (:active-slot g)
-                                   (cycle (:available-slots g)))))))
+                                   (cycle (:available-slots world)))))))
 
 (defn join 
   "lets a player join the game, optionally at a specified slot"
@@ -70,20 +70,11 @@
 
 ;;; game generation
 
-(defn- possible-slots [world]
-  (map #(coords->index (:w world) %)
-       [[0 0] ;top left
-        [(- (:w world) 1) (- (:h world) 1)] ; bot right
-        [(- (:w world) 1) 0] ; top right
-        [0 (- (:h world) 1)]])) ; bot left
-
 (defn new-game [w]
-  (let [slots (possible-slots w)]
-    {:world w ; should not be changed
-     :generation 0
-     :available-slots slots ; should not be changed
-     :slot-occupancy {}
-     :active-slot nil}))
+  {:world w ; should not be changed
+   :generation 0
+   :slot-occupancy {}
+   :active-slot nil})
 
 (defn set-start-slot [g]
   (let [s (apply min-key #(size (:world g) %) (occupied-slots g))]

@@ -5,51 +5,58 @@
             [floodr.logic.world :refer :all]))
 
 (def tnodes t/test-nodes1)
+(def tclusters t/test-clusters1)
 (def tw t/test-world1)
 
 (deftest test-cluster
-  (is (= (cluster tw 1) (cluster tw 1)))
-  (is (= (cluster tw 3) (cluster tw 1)))
-  (is (= (cluster tw 4) (cluster tw 1)))
-  (is (= (cluster tw 7) (cluster tw 8)))
-  (is (= (cluster tw 8) (cluster tw 8))))
+  (is (= (cluster tw [1 0]) (cluster tw [1 0])))
+  (is (= (cluster tw [0 1]) (cluster tw [1 0]) [1 0]))
+  (is (= (cluster tw [1 1]) (cluster tw [1 0])))
+  (is (= (cluster tw [1 2]) (cluster tw [2 2])))
+  (is (= (cluster tw [2 2]) (cluster tw [2 2]))))
+
+(deftest test-nodes
+  (is (= (nodes tw) tnodes)))
 
 (deftest test-clusters
-  (is (= (apply clusters tw tnodes) (:clusters tw))))
+  (is (= (clusters tw) tclusters)))
+
+(deftest test-nodes->clusters
+  (is (= (nodes->clusters tw tnodes) tclusters)))
 
 (deftest test-color
-  (is (= (color tw 7) (color tw 8) :red))
-  (is (has-color? tw 7 :red))
-  (is (has-color? tw 8 :red))
-  (is (has-color? tw 0 :cyan))
-  (is (not (has-color? tw 0 :red))))
+  (is (= (color tw [1 2]) (color tw [2 2]) :red))
+  (is (has-color? tw [1 2] :red))
+  (is (has-color? tw [2 2] :red))
+  (is (has-color? tw [0 0] :cyan))
+  (is (not (has-color? tw [0 0] :red))))
 
 (deftest test-size
-  (is (= 3 (size tw 1)))
-  (is (= 4 (size tw 1 0)))
-  (is (= 4 (size tw 0 1 3 4)))
-  (is (= 2 (size tw 8)))
-  (is (= 3 (apply size tw (neighbors tw 0)))))
+  (is (= 3 (size tw [1 0])))
+  (is (= 4 (size tw [1 0] [0 0])))
+  (is (= 4 (size tw [0 0] [1 0] [0 1] [1 1])))
+  (is (= 2 (size tw [2 2])))
+  (is (= 3 (apply size tw (neighbors tw [0 0])))))
 
 (deftest test-neighbors
-  (is (= 1 (count (neighbors tw 0))))
-  (is (contains? (neighbors tw 4) (cluster tw 0)))
-  (is (contains? (neighbors tw 4) (cluster tw 2)))
-  (is (contains? (neighbors tw 4) (cluster tw 5)))
-  (is (contains? (neighbors tw 4) (cluster tw 6)))
-  (is (contains? (neighbors tw 4) (cluster tw 7)))
-  (is (contains? (neighbors tw 4) (cluster tw 8)))
-  (is (contains? (neighbors tw 0) (cluster tw 1))))
+  (is (= 1 (count (neighbors tw [0 0]))))
+  (is (contains? (neighbors tw [1 1]) (cluster tw [0 0])))
+  (is (contains? (neighbors tw [1 1]) (cluster tw [2 0])))
+  (is (contains? (neighbors tw [1 1]) (cluster tw [2 1])))
+  (is (contains? (neighbors tw [1 1]) (cluster tw [0 2])))
+  (is (contains? (neighbors tw [1 1]) (cluster tw [1 2])))
+  (is (contains? (neighbors tw [1 1]) (cluster tw [2 2])))
+  (is (contains? (neighbors tw [0 0]) (cluster tw [1 0]))))
 
 (deftest test-merge-clusters 
-  (let [w (merge-clusters tw 1 8)
+  (let [w (merge-clusters tw [1 0] [2 2])
         c #(cluster w %)                                    
         n #(neighbors w %)]
-    (is (= (size w 1) 5))
-    (is (= (c 1) (c 3) (c 4) (c 7) (c 8)))
-    (is (= (n 1) (n 3) (n 4) (n 7) (n 8))))
-  (let [w (merge-clusters tw 0 1 2 3 4 5 6 7 8)
+    (is (= (size w [1 0]) 5))
+    (is (= (c [1 0]) (c [0 1]) (c [1 1]) (c [1 2]) (c [2 2])))
+    (is (= (n [1 0]) (n [0 1]) (n [1 1]) (n [1 2]) (n [2 2]))))
+  (let [w (merge-clusters tw [0 0] [1 0] [2 0] [0 1] [1 1] [2 1] [0 2] [1 2] [2 2])
         c #(cluster w %)                                    
         n #(neighbors w %)]
-    (is (= (size w 1) 9))
-    (is (= (c 1) (c 2) (c 5) (c 6) (c 7)))))
+    (is (= (size w [1 0]) 9))
+    (is (= (c [1 0]) (c [2 0]) (c [2 1]) (c [0 2]) (c [1 2])))))

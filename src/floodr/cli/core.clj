@@ -93,6 +93,8 @@
   (choose-opt (with-close-option)
               ["debug window"
                ""
+               (str "flag: " (get-in game [:world :flag]))
+               (str "clusters left: " (g/clusters-left game))
                (str "currently winning: " (format-player (p/leader game)))
                ""
                (str "r: " (solver/potential-gain game :red))
@@ -165,10 +167,10 @@
 
 (defn block-at
   "returns a vector representing the block at the given coordinates"
-  [{:keys [world active-slot]} x y dot]
-  (let [i (coords->index (:w world) [x y])]
-    [x y (w/color world i)
-     (when (and dot (w/same-cluster? world i active-slot)) ".")]))
+  [{:keys [world active-slot]} node dot]
+  [node (w/color world node)
+   (cond (= (:flag world) node) "##"
+         (and dot (w/same-cluster? world node active-slot)) ".")])
 
 (defn world->blocks
   "extracts blocks in the form of [x y :color text] from the world"
@@ -177,11 +179,11 @@
         players-with-same-color (filter #(= (w/color world active-slot)
                                             (w/color world %))
                                         (g/non-active-slots game))
-        dot (not (empty? (clojure.set/intersection (apply w/clusters world players-with-same-color)
+        dot (not (empty? (clojure.set/intersection (w/nodes->clusters world players-with-same-color)
                                                    (w/neighbors world active-slot))))]
-    (apply concat (for [y (range 0 h)]
-                    (for [x (range 0 w)]
-                      (block-at game x y dot))))))
+    (map #(block-at game % dot) (w/nodes world))))
+
+(defn pp [x] (println x) x)
   
 (defn put-main-window [screen game]
   (o/all-black screen)

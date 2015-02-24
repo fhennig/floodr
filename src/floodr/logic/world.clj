@@ -15,9 +15,15 @@
     (if (= node p) node
       (recur world p))))
 
-(defn clusters
-  [w & nodes]
+(defn nodes->clusters
+  [w nodes]
     (set (map #(cluster w %) nodes)))
+
+(defn clusters [w]
+  (nodes->clusters w (vals (:parents w))))
+
+(defn nodes [w]
+  (set (keys (:parents w))))
 
 (defn same-cluster? [w n1 n2]
   (= (cluster w n1) (cluster w n2)))
@@ -45,7 +51,7 @@
   "gets the accumulated size of the given clusters, without duplicates"
   [w & nodes]
   (apply + (map #(get (:sizes w) %) 
-                (apply clusters w nodes))))
+                (nodes->clusters w nodes))))
 
 (defn neighbors 
   "returns the neighbor clusters of the cluster"
@@ -65,8 +71,7 @@
                        [[:parents] assoc cs cb]
                        [[:neighbors] dissoc cs]
                        [[:sizes] dissoc cs]
-                       [[:colors] dissoc cs]
-                       [[:clusters] disj cs])))))
+                       [[:colors] dissoc cs])))))
 
 (defn merge-clusters
   "merges any number of clusters"
@@ -79,28 +84,25 @@
 
 (def empty-world
   {:w 0 :h 0 ; used within the UI
-   :clusters #{} ; the clusters that exist
    :parents {} ; maps nodes to their parents; used to get the cluster of a node
    :neighbors {} ; what neighbors does a cluster have
    :colors {} ; what color does a cluster have
    :sizes {}}) ; size of the clusters
 
-;;; World generation
+;;; rectangular world generation 
 
-(defn- add-node ; TODO make private 
+(defn- add-node
   [w node node-ns node-col]
-  (m-assoc-in (update-in w [:clusters] conj node)
+  (m-assoc-in w
             [[:parents node] node]
             [[:neighbors node] node-ns]
             [[:colors node] node-col]
             [[:sizes node] 1]))
 
 (defn- gen-neighbors 
-  [w h i neighborhood-fn]
-  (let [[x y] (index->coords w i)]
-    (set (map #(coords->index w %)
-         (filter #(in-bounds? w h %)
-                 (neighborhood-fn x y))))))
+  [w h [x y] neighborhood-fn]
+  (set (filter #(in-bounds? w h %)
+               (neighborhood-fn x y))))
 
 (defn- neighbors-4
   [x y]
@@ -116,23 +118,40 @@
   (let [col (color w c)]
     (apply merge-clusters w c (filter #(has-color? w % col) (neighbors w c)))))
 
-(defn gen-rand-world ;; TODO add parameter what neighbor function to use
+(defn- possible-slots
+  "generates a vector of possible starting positions for the given world"
+  [w h]
+  (distinct [[0 0]                      ; top left
+             [(- w 1) (- h 1)]          ; bot right
+             [(- w 1) 0]                ; top right
+             [0 (- h 1)]]))             ; bot left
+
+(defn- gen-flag [w h]
+  (let [cx (/ w 2)
+        cy (/ h 2)]
+      [(rand-nth [(ceil cx) (floor cx)])
+       (rand-nth [(ceil cy) (floor cy)])]))
+
+(defn- gen-nodes [w h]
+  (apply concat (for [y (range 0 h)]
+                  (for [x (range 0 w)]
+                    [x y]))))
+
+(defn gen-rand-world
+  "generates a rectangular world of the given size"
   [width height neighbor-type]
-  (let [nodes (range (* width height))
-        n-fn (case neighbor-type
+  (let [n-fn (case neighbor-type
                :4 neighbors-4
                :8 neighbors-8)
-        init-world (m-assoc-in empty-world
-                               [[:w] width]
-                               [[:h] height])
         add (fn [world node]
               (add-node world node
                         (gen-neighbors width height node n-fn)
                         (rand-nth colors)))
-        w1 (reduce add init-world nodes)
-        w2 (reduce #(colorize %1 %2) w1 nodes)]
-;        x (rand-nth (apply list (:clusters w2)))
-;        y (rand-nth (apply list (:clusters w2)))
-;    (apply merge-clusters w2 x (neighbors w2 x))))
-;    (merge-clusters w2 x y)))
-    w2))
+        nodes (gen-nodes width height)
+        init-world (m-assoc-in empty-world
+                               [[:w] width]
+                               [[:h] height]
+                               [[:available-slots] (possible-slots width height)]
+                               [[:flag] (gen-flag width height)])
+        w (reduce add init-world nodes)
+        w (reduce #(colorize %1 %2) w nodes)] w))

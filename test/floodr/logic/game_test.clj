@@ -28,7 +28,7 @@
   (is (not (occupied? t/test-game1 (last (:available-slots t/test-game1))))))
 
 (deftest test-next-active-slot
-  (is (= 3 (next-active-slot t/test-game2))))
+  (is (= [1 1] (next-active-slot t/test-game2))))
 
 (deftest test-join
   (let [tg1 t/test-game1

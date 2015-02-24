@@ -92,7 +92,7 @@
 (defn- block-str [text]
   (apply str (take 2 (str text "  "))))
 
-(defn- put-block [screen x y col & [text]]
+(defn- put-block [screen [x y] col & [text]]
   (let [[sx sy] (game-coords->screen-coords x y)]
     (s/put-string screen sx sy (block-str text) {:bg col})))
 
