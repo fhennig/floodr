@@ -53,6 +53,9 @@
   (apply + (map #(get (:sizes w) %) 
                 (nodes->clusters w nodes))))
 
+(defn dist [w node]
+  (get-in w [:distances (cluster w node)]))
+
 (defn neighbors 
   "returns the neighbor clusters of the cluster"
   [world node]
@@ -68,9 +71,11 @@
           (m-update-in w [[:neighbors] assoc cb (set/union (disj (neighbors w cs) cb)
                                                          (disj (neighbors w cb) cs))]
                        [[:sizes] assoc cb (+ (size w cs) (size w cb))]
+                       [[:sizes] dissoc cs]
+                       [[:distances] assoc cb (min (dist w cb) (dist w cs))]
+                       [[:distances] dissoc cs]
                        [[:parents] assoc cs cb]
                        [[:neighbors] dissoc cs]
-                       [[:sizes] dissoc cs]
                        [[:colors] dissoc cs])))))
 
 (defn merge-clusters
@@ -88,6 +93,7 @@
    :neighbors {}        ; what neighbors does a cluster have
    :colors {}           ; what color does a cluster have
    :sizes {}            ; size of the clusters
+   :distances {}        ; distances between clusters and the flag
    :available-slots '() ; nodes that can be owned by players
    :flag nil})          ; flag for CTF
 
@@ -99,6 +105,7 @@
             [[:parents node] node]
             [[:neighbors node] node-ns]
             [[:colors node] node-col]
+            [[:distances node] (distance node (:flag w))]
             [[:sizes node] 1]))
 
 (defn- gen-neighbors 

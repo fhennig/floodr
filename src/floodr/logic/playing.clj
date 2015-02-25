@@ -22,9 +22,6 @@
           (recur (g/join game (new-player p-nr (str "Computer") :ai))
                  (dec player-count) (dec ai-count))))))
 
-(defn leader [g]
-  (get-in g [:slot-occupancy (apply max-key #(floodr.logic.world/size (:world g) %) (g/occupied-slots g))]))
-
 (defn move-ais
   [game]
   (cond (= (get-in game [:slot-occupancy (:active-slot game) :type]) :human) game

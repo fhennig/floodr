@@ -67,8 +67,6 @@
 
 ;;; game generation
 
-(def game-modes '(:flood :ctf))
-
 (defn new-game [w t]
   {:world w ; should not be changed
    :mode t
@@ -76,11 +74,16 @@
    :slot-occupancy {}
    :active-slot nil})
 
-(defn set-start-slot [g] ; TODO maybe this should be a multimethod too
-  (let [s (apply min-key #(size (:world g) %) (occupied-slots g))]
-    (assoc-in g [:active-slot] s)))
-
 ;;; game rules
+
+(def rank-fns
+  {:flood size
+   :ctf #(- (dist %1 %2))})
+
+(def game-modes (sort (keys rank-fns)))
+
+(defn rank-fn [g]
+  #(((:mode g) rank-fns) (:world g) %))
 
 (defmulti finished? :mode)
 
@@ -90,11 +93,9 @@
 (defmethod finished? :ctf [game]
   (player-owned? game (get-in game [:world :flag])))
 
-(defmulti winner :mode) ; TODO use everywhere and add tests
+(defn leader [g]
+  (get-in g [:slot-occupancy (apply max-key (rank-fn g) (occupied-slots g))]))
 
-(defmethod winner :flood [g]
-  (get-in g [:slot-occupancy
-             (apply max-key #(size (:world g) %) (occupied-slots g))]))
-
-(defmethod winner :ctf [game]
-  (owner game (get-in game [:world :flag])))
+(defn set-start-slot [g]
+  (let [s (apply min-key (rank-fn g) (occupied-slots g))]
+    (assoc-in g [:active-slot] s)))

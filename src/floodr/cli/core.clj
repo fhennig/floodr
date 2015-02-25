@@ -88,7 +88,7 @@
             \q {:action quit
                 :desc "quit"}}
            ["game over" ""
-            (str (format-player (p/leader (:game state))) " won!") ""
+            (str (format-player (g/leader (:game state))) " won!") ""
             \r \n \q]
            state))
 
@@ -102,8 +102,9 @@
               ["debug window"
                ""
                (str "flag: " (get-in game [:world :flag]))
+               (str "dist: " (w/dist (:world game) (:active-slot game)))
                (str "clusters left: " (g/clusters-left game))
-               (str "currently winning: " (format-player (p/leader game)))
+               (str "currently winning: " (format-player (g/leader game)))
                ""
                (str "r: " (solver/potential-gain game :red))
                (str "g: " (solver/potential-gain game :green))
@@ -169,7 +170,7 @@
   (if (= (g/player-count game) 1)
     [(str "generation: " generation)]
     [(str "next move: " (format-player (slot-occupancy active-slot)))
-     (str "currently winning: " (format-player (p/leader game)))]))
+     (str "currently winning: " (format-player (g/leader game)))]))
 
 ;;; drawing
 

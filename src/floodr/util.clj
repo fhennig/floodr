@@ -30,6 +30,17 @@
 (defn next-in-cycle [current seq]
   (second (drop-up-to current (cycle seq))))
 
+;;; math
+
+(defn floor [x]
+  (int (Math/floor x)))
+
+(defn ceil [x]
+  (int (Math/ceil x)))
+
+(defn sqr [x]
+  (Math/pow x 2))
+
 ;;; working with grid-graphs
 
 (defn index->coords
@@ -45,13 +56,12 @@
   (and (<= 0 x) (< x w)
        (<= 0 y) (< y h)))
 
-;;; math
-
-(defn floor [x]
-  (int (Math/floor x)))
-
-(defn ceil [x]
-  (int (Math/ceil x)))
+(defn distance
+  "calculates the Euclidean distance between two 2D coodinates"
+  [[x1 y1] [x2 y2]]
+  (let [a (Math/abs (- x1 x2))
+        b (Math/abs (- y1 y2))]
+    (Math/sqrt (+ (sqr a) (sqr b)))))
 
 ;;; converting chars and digits
 
