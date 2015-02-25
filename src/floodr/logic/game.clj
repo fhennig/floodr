@@ -82,8 +82,11 @@
 
 (def game-modes (sort (keys rank-fns)))
 
-(defn rank-fn [g]
-  #(((:mode g) rank-fns) (:world g) %))
+(defn rank
+  "ranks the given slot in the given game.
+  the higher the rank the better the player"
+  [game slot]
+  (((:mode game) rank-fns) (:world game) slot))
 
 (defmulti finished? :mode)
 
@@ -94,8 +97,8 @@
   (player-owned? game (get-in game [:world :flag])))
 
 (defn leader [g]
-  (get-in g [:slot-occupancy (apply max-key (rank-fn g) (occupied-slots g))]))
+  (get-in g [:slot-occupancy (apply max-key #(rank g %) (occupied-slots g))]))
 
 (defn set-start-slot [g]
-  (let [s (apply min-key (rank-fn g) (occupied-slots g))]
+  (let [s (apply min-key #(rank g %) (occupied-slots g))]
     (assoc-in g [:active-slot] s)))

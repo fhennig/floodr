@@ -106,12 +106,12 @@
                (str "clusters left: " (g/clusters-left game))
                (str "currently winning: " (format-player (g/leader game)))
                ""
-               (str "r: " (solver/potential-gain game :red))
-               (str "g: " (solver/potential-gain game :green))
-               (str "b: " (solver/potential-gain game :blue))
-               (str "c: " (solver/potential-gain game :cyan))
-               (str "m: " (solver/potential-gain game :magenta))
-               (str "y: " (solver/potential-gain game :yellow))
+               (str "r: " (solver/potential-rank game :red))
+               (str "g: " (solver/potential-rank game :green))
+               (str "b: " (solver/potential-rank game :blue))
+               (str "c: " (solver/potential-rank game :cyan))
+               (str "m: " (solver/potential-rank game :magenta))
+               (str "y: " (solver/potential-rank game :yellow))
                "" \c]
               state))
 

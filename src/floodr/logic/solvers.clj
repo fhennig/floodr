@@ -7,12 +7,12 @@
   [w cluster]
   (distinct (map #(l/color w %) (l/neighbors w cluster))))
 
-(defn potential-gain
+(defn potential-rank
   "amout of nodes with color adjacent to the cluster of the current player
   and not already owned by a player"
   [g col]
-  (apply l/size (:world g)
-         (g/clusters-to-merge g (g/active-slot-cluster g) col)))
+  (let [act-clust (g/active-slot-cluster g)]
+    (g/rank (g/player-move g col) (:active-slot g))))
 
 (defn- can-move? [g]
   (> (count (filter #(not (g/player-owned? g %))
@@ -21,7 +21,8 @@
 
 (defn greedy-select-col [g]
   (if (not (can-move? g)) (rand-nth l/colors)
-      (apply max-key #(potential-gain g %) l/colors)))
+      (apply max-key #(potential-rank g %) l/colors)))
 
 (defn greedy-move [g]
   (g/player-move g (greedy-select-col g)))
+
