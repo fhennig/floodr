@@ -20,17 +20,17 @@ it's out there for anyone who is interested!
 ## Installation
 
 Download the standalone jar from the
-[releases page](https://github.com/greenkeeper/floodr/releases/tag/v0.2). 
+[releases page](https://github.com/greenkeeper/floodr/releases/tag/v0.3). 
 
 Or clone the repo and use [leiningen](http://leiningen.org/) to run it.
 
 ## Starting
 
-    $ java -jar floodr-0.2.0-standalone.jar [args]
+    $ java -jar floodr-0.3-standalone.jar [args]
 
 However I recommend to create an alias in `~/.bash_aliases`
 
-    alias floodr='java -jar /path/to/floodr-0.2.0-standalone.jar'
+    alias floodr='java -jar /path/to/floodr-0.3-standalone.jar'
 
 Add `--swing` as an argument if you want to use a GUI terminal. This
 should only be used if you don't have `/bin/sh`, because it is not
