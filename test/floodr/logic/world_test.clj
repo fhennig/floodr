@@ -38,6 +38,13 @@
   (is (= 2 (size tw [2 2])))
   (is (= 3 (apply size tw (neighbors tw [0 0])))))
 
+(deftest test-dist
+  (is (= 0 (dist tw [1 1])))
+  (is (= 0 (dist tw [0 1])))
+  (is (= 0 (dist tw [1 0])))
+  (is (= 1 (dist tw [2 1])))
+  (is (= 1 (dist tw [1 2]))))
+
 (deftest test-neighbors
   (is (= 1 (count (neighbors tw [0 0]))))
   (is (contains? (neighbors tw [1 1]) (cluster tw [0 0])))

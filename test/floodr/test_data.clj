@@ -5,6 +5,7 @@
    :parents {[0 0] [0 0], [1 0] [1 0], [0 1] [0 1], [1 1] [1 1]}
    :colors {[0 0] :red, [1 0] :green, [0 1] :blue, [1 1] :yellow}
    :sizes {[0 0] 1, [1 0] 1, [2 0] 1, [1 1] 1}
+   :distances {[0 0] 0, [1 0] 1, [2 0] 1, [1 1] 1}
    :available-slots [[0 0] [1 0] [0 1] [1 1]]
    :flag [0 0]})
 
@@ -20,6 +21,7 @@
                [0 0] #{[1 0] [0 1]}}
    :colors {[1 2] :red, [0 2] :yellow, [2 1] :blue, [2 0] :magenta, [1 0] :green, [0 0] :cyan}
    :sizes {[1 2] 2, [0 2] 1, [2 1] 1, [2 0] 1, [1 0] 3, [0 0] 1}
+   :distances {[1 2] 1, [0 2] 1.5, [2 1] 1, [2 0] 1.5, [1 0] 0, [0 0] 1.5}
    :available-slots [[0 0] [2 2] [2 0] [0 2]]
    :flag [1 1]})
 
@@ -35,6 +37,9 @@
    :generation 1
    :slot-occupancy {[0 0] "Player 1", [2 2] "Player 2"}
    :active-slot [0 0]})
+
+(def test-cgame1
+  (assoc test-game1 :mode :ctf))
 
 (def test-game2
   {:world {:w 2 :h 2

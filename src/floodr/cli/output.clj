@@ -31,15 +31,34 @@
 
 (defn- space [n] (apply str (repeat n " ")))
 
-(defn- pad [s len centered]
-  (let [pad-len (- len (count s))
-        pad-f (if centered (space (floor (/ pad-len 2))) "")
-        pad-b (space (- pad-len (count pad-f)))]
-      (str pad-f s pad-b)))
+(defn- spaced-str [& strs]
+  (reduce #(str %1 " " %2) strs))
 
-(defn- pad-lines [lines]
-  (let [line-width (apply max (map count lines))]
-    (map #(pad % line-width false) lines)))
+(defn- pad [s len alignment]
+  (let [pad-len (- len (count s))
+        pad-f (case alignment
+                :c (floor (/ pad-len 2))
+                :r pad-len
+                0)
+        pad-b (- pad-len pad-f)]
+    (str (space pad-f) s (space pad-b))))
+
+(defn- max-width [words]
+  (apply max (map count words)))
+
+(defn- pad-words [words & [alignment]]
+  (let [new-width (max-width words)]
+    (mapv #(pad % new-width alignment) words)))
+
+;;; format table
+
+(defn table
+  "takes a matrix of strings and optionally a seq of alignments
+  (:c :l :r), one per column.
+  returns a seq of strings (formatted lines of the table)"
+  [rows & [alignments]]
+  (map #(apply spaced-str %) (transpose (map pad-words
+                                      (transpose rows) alignments))))
 
 ;;; drawing windows
 
@@ -70,7 +89,7 @@
    a line may be a single character if a key-description is provided"
   (when-not (nil? lines)
     (let [ls (map #(line->string % key-descs) lines)
-          ls-padded (pad-lines ls)
+          ls-padded (pad-words ls)
           width (count (first ls-padded))]
       (put-lines screen width ls-padded))))
 

@@ -22,10 +22,10 @@
   (is (in-bounds? w 3 [5 1])))
 
 (deftest test-distance
-  (is (= 2 (distance [0 0] [0 2])))
-  (is (= 2 (distance [0 0] [2 0])))
-  (is (= 2 (distance [0 2] [0 0])))
-  (is (= 2 (distance [2 0] [0 0]))))
+  (is (= 2.0 (distance [0 0] [0 2])))
+  (is (= 2.0 (distance [0 0] [2 0])))
+  (is (= 2.0 (distance [0 2] [0 0])))
+  (is (= 2.0 (distance [2 0] [0 0]))))
 
 (deftest test-drop-up-to
   (is (= '(3 4 5) (drop-up-to 3 '(1 2 3 4 5)))))

@@ -30,6 +30,9 @@
 (defn next-in-cycle [current seq]
   (second (drop-up-to current (cycle seq))))
 
+(defn transpose [m]
+  (apply mapv vector m))
+
 ;;; math
 
 (defn floor [x]

@@ -80,17 +80,31 @@
   [{:keys [name id]}]
   (str name " (" id ")"))
 
+(defn format-rank
+  "formats a rank as a percent value"
+  [rank]
+  (str "  " (Math/round (double (* rank 100))) "%"))
+
+(defn format-ranking [g]
+  (let [slots (g/slots-ranked g)]
+    (o/table (transpose [(map #(str (inc %) ".") (range 0 (count slots)))
+                         (map #(format-player (g/player g %)) slots)
+                         (map #(format-rank (g/rank g %)) slots)])
+             [:l :l :r])))
+
 (defn show-winner [choose-opt state]
   (choose-opt {\r {:action #(assoc-in % [:game] (c/create-new-game (:game-conf %)))
-                :desc "start new game"}
-            \n {:action #(new-game choose-opt %)
-                :desc "configure a new game"}
-            \q {:action quit
-                :desc "quit"}}
-           ["game over" ""
-            (str (format-player (g/leader (:game state))) " won!") ""
-            \r \n \q]
-           state))
+                   :desc "start new game"}
+               \n {:action #(new-game choose-opt %)
+                   :desc "configure a new game"}
+               \q {:action quit
+                   :desc "quit"}}
+              (concat ["game over" ""
+                       (str (format-player (g/leader (:game state)))
+                            " won!") ""]
+                      (format-ranking (:game state))
+                      ["" \r \n \q])
+              state))
 
 (defn with-close-option [& [options]]
   (let [opts (if options options {})]
@@ -102,7 +116,9 @@
               ["debug window"
                ""
                (str "flag: " (get-in game [:world :flag]))
-               (str "dist: " (w/dist (:world game) (:active-slot game)))
+               (str "rank: " (float (g/rank game (:active-slot game))))
+               (try (str "ranks:" (vector (map #(float (g/rank game %)) (g/occupied-slots game))))
+                    (catch Exception ex nil))
                (str "clusters left: " (g/clusters-left game))
                (str "currently winning: " (format-player (g/leader game)))
                ""
@@ -192,8 +208,6 @@
                                                    (w/neighbors world active-slot))))]
     (map #(block-at game % dot) (w/nodes world))))
 
-(defn pp [x] (println x) x)
-  
 (defn put-main-window [screen game]
   (o/all-black screen)
   (o/put-stats screen (stats game))

@@ -51,10 +51,14 @@
     (is (not (= (:active-slot tg1) (:active-slot tg2))))
     (is (= (w/color (:world tg2) (:active-slot tg1)) move-color))))
 
+(deftest test-new-game
+  (is (not (nil? (new-game t/test-world1 :flood))))
+  (is (not (nil? (new-game t/test-world1 :ctf)))))
+
 (deftest test-set-start-slot
   (let [init-game (join (new-game t/test-init-world :flood) "Player 1")]
     (is (not (nil? (:active-slot (set-start-slot init-game)))))))
 
-(deftest test-new-game
-  (is (not (nil? (new-game t/test-world1 :flood))))
-  (is (not (nil? (new-game t/test-world1 :ctf)))))
+(deftest test-rank
+  (is (= 1/9 (rank t/test-game1 [0 0])))
+  (is (= 2/9 (rank t/test-game1 [2 2]))))

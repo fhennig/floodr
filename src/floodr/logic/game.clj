@@ -2,19 +2,20 @@
   (:require [floodr.logic.world :refer :all]
             [floodr.util :refer :all]))
 
+(defn player [g slot]
+  (get-in g [:slot-occupancy slot]))
+
+(defn occupied-slots [g]
+  (set (keys (:slot-occupancy g))))
+
+(defn occupied? [g slot]
+  (contains? (occupied-slots g) slot))
+
 (defn player-count [g]
-  (count (:slot-occupancy g)))
+  (count (occupied-slots g)))
 
 (defn clusters-left [game]
   (- (count (clusters (:world game))) (player-count game)))
-
-(defn occupied? [g slot]
-  (contains? (:slot-occupancy g) slot))
-
-(defn occupied-slots
-  "returns the occupied slots in the game, in the same order as the available slots are"
-  [{:keys [world] :as g}]
-  (filter #(occupied? g %) (:available-slots world)))
             
 (defn next-free-slot [{:keys [world] :as g}]
   (first (filter #(not (occupied? g %))
@@ -27,17 +28,12 @@
   (remove #(= (:active-slot g) %)
           (occupied-slots g)))
 
-(defn owner [g n]
-  (let [c (cluster (:world g) n)]
-    (get (:slot-occupancy g) (first (filter #(= c (cluster (:world g) %))
-                                            (keys (:slot-occupancy g)))))))
-
 (defn player-owned? [g c]
   (let [ps (nodes->clusters (:world g) (keys (:slot-occupancy g)))]
     (contains? ps (cluster (:world g) c))))
 
-(defn next-active-slot [g]
-  (next-in-cycle (:active-slot g) (occupied-slots g)))
+(defn next-active-slot [{:keys [world] :as g}]
+  (next-in-cycle (:active-slot g) (filter #(occupied? g %) (:available-slots world))))
 
 (defn join 
   "lets a player join the game, optionally at a specified slot"
@@ -77,8 +73,10 @@
 ;;; game rules
 
 (def rank-fns
-  {:flood size
-   :ctf #(- (dist %1 %2))})
+  {:flood (fn [w node] (/ (size w node) (count (nodes w))))
+   :ctf (fn [w node] (let [slot-dist (distance (:flag w) node)
+                           clust-dist (dist w node)]
+                       (/ (- slot-dist clust-dist) slot-dist)))})
 
 (def game-modes (sort (keys rank-fns)))
 
@@ -97,8 +95,13 @@
   (player-owned? game (get-in game [:world :flag])))
 
 (defn leader [g]
-  (get-in g [:slot-occupancy (apply max-key #(rank g %) (occupied-slots g))]))
+  (player g (apply max-key #(rank g %) (occupied-slots g))))
 
 (defn set-start-slot [g]
   (let [s (apply min-key #(rank g %) (occupied-slots g))]
     (assoc-in g [:active-slot] s)))
+
+(defn slots-ranked
+  "returns the occupied slots sorted descending by rank"
+  [g]
+  (reverse (sort-by #(rank g %) (occupied-slots g))))
