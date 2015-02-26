@@ -3,10 +3,7 @@
 A game for the unix terminal.
 
 <p align="center">
-    <video width="416" height="240" autoplay loop>
-        <source src="screenshots/floodr_flood_demo.webm" type="video/webm">
-        Your browser does not support webm.
-    </video>
+    <img width="416" height="240" src="screenshots/floodr_flood_demo.gif"/>
 </p>
 
 floodr is a game about coloring blocks to either get the biggest part
