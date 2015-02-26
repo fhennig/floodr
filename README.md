@@ -1,10 +1,18 @@
 # floodr
 
-![screenshot](floodr_screenshot01.png)
+A game for the unix terminal.
 
-floodr is a game for the unix terminal. The goal is to make your part
-of the board as large as possible. It is possible to play alone or
-with up to four players, and there is also an AI.
+<p align="center">
+    <video width="416" height="240" autoplay loop>
+        <source src="screenshots/floodr_flood_demo.webm" type="video/webm">
+        Your browser does not support webm.
+    </video>
+</p>
+
+floodr is a game about coloring blocks to either get the biggest part
+of the blocks or capture a specific block. Take a look a the
+screenshots for more information or simply download the jar and try it
+yourself!
 
 This was mostly a project for myself to learn some clojure, but now
 it's out there for anyone who is interested!
@@ -25,7 +33,8 @@ However I recommend to create an alias in `~/.bash_aliases`
     alias floodr='java -jar /path/to/floodr-0.2.0-standalone.jar'
 
 Add `--swing` as an argument if you want to use a GUI terminal. This
-should only be used if you don't have `/bin/sh`.
+should only be used if you don't have `/bin/sh`, because it is not
+very pretty.
 
 ## Controls
 
@@ -33,7 +42,28 @@ Type `?` to get an overview of the controls.
 
 `s` `d` `f` and `j` `k` `l` are used to colorize your block.
 
-`n` to start a new game and `q` to quit.
+`n` to configure and start a new game and `q` to quit.
+
+## Screenshots
+
+<p align="center">
+    
+    capture the flag with 4 players <br>
+    
+    <img width="543" height="349" src="screenshots/floodr_screenshot_4players_ctf.png"/> <br>
+    
+    single player flood <br>
+
+    <img width="543" height="349" src="screenshots/floodr_screenshot_singleplayer_flood.png"/> <br>
+    
+    win screen <br>
+
+    <img width="543" height="349" src="screenshots/floodr_screenshot_win_screen.png"/> <br>
+    
+    game configuration <br>
+    
+    <img width="543" height="349" src="screenshots/floodr_screenshot_game_configuration.png"/> <br>
+</p>
 
 ## License
 
