@@ -1,6 +1,5 @@
-(defproject floodr "0.2.0"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+(defproject floodr "0.3.0"
+  :description "A game for the unix terminal."
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.6.0"]
